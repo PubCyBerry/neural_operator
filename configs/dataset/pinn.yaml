@@ -1,0 +1,10 @@
+_target_: src.data.datasets.PINNDataset
+
+data_dir: ${paths.data_dir}
+filename: ${filename}
+idx: 0
+num_data: 1000
+
+Nu: 20000
+Ni: 200
+Nb: 200

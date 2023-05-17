@@ -1,8 +1,16 @@
+etc
+.vscode
+logs
 
-# Don't commit data file
+# Don't commit these file
 # Keep Directory only
 data/*
 !data/.gitkeep
+notebooks/*
+!notebooks/.gitkeep
+
+checkpoints/*
+!checkpoints/.gitkeep
 
 # Don't commit test file
 test.ipynb

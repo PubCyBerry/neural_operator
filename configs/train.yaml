@@ -1,0 +1,24 @@
+# @package _global_
+# specify here default configuration
+# order of defaults determines the order in which configs override each other
+defaults:
+  - _self_
+  - model: dnn.yaml
+  - dataset: dnn.yaml
+  - optimizer: default.yaml
+  - scheduler: default.yaml
+  - loader: default.yaml
+  - paths: default.yaml
+  - hydra: default.yaml
+
+  # experiment configs allow for version control of specific hyperparameters
+  # e.g. best hyperparameters for given model and datamodule
+  - experiment: null
+
+# task name, determines output directory path
+task_name: train
+
+filename: Burgers_2048_0.1
+seed: 41 # for reproducibility
+epochs: 10
+train_test_split: [0.8, 0.2]

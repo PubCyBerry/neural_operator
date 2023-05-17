@@ -1,0 +1,5 @@
+_target_: torch.utils.data.DataLoader
+
+batch_size: 128
+num_workers: 0 # if 0, use main process. otherwise, use multi processing.
+pin_memory: False # if true, data will be copied on GPU

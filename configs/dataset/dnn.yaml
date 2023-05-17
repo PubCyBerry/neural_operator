@@ -1,0 +1,6 @@
+_target_: src.data.datasets.DNNDataset
+
+data_dir: ${paths.data_dir}
+filename: ${filename}
+idx: 0
+num_data: 1000
