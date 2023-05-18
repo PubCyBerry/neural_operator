@@ -6,6 +6,7 @@ etc
 data/*
 !data/.gitkeep
 !data/pytest_data.npz
+!data/demo.npz
 notebooks/*
 !notebooks/.gitkeep
 logs/*
