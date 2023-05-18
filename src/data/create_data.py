@@ -1,5 +1,6 @@
 # import libs
 import os
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Optional, Tuple
 
@@ -23,7 +24,7 @@ class Data_Generator:
     Nx: int = 2**10  # 2^10 = 1024
     Nt: int = 2**9  # 2^9  = 512
     coefficient: float = 0.1
-    data_dir: str = "data"
+    data_dir: Path = Path("data")
     backend: str = "torch"
     space: callable = GRF(backend)
     pde_solver: callable = getattr(solver, target_pde)
@@ -109,12 +110,13 @@ class Data_Generator:
         return s
 
     def save_data(self, filename: str, data: np.array) -> None:
-        os.makedirs(self.data_dir, exist_ok=True)
+        file_path = (Path(self.data_dir) / filename).with_suffix('.npz')
+        file_path.parent.mkdir(parents=True, exist_ok=True)
         np.savez(
-            os.path.join(self.data_dir, filename + ".npz"),
+            file_path,
             xs=self.xs,
             ts=self.ts,
             ys=data,
             coefficient=self.coefficient,
         )
-        print(f"Data saved at {os.path.join(self.data_dir, filename+'.npz')}")
+        print(f"Data saved at {file_path}")
