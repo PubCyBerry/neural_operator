@@ -1,6 +1,6 @@
 _target_: src.models.models.DeepONet
 
-branch_dim: 128
+branch_dim: 512
 hidden_dim: 20
 trunk_dim: 2
 n_layers: 8

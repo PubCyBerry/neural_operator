@@ -2,3 +2,6 @@
 defaults:
   - override /model: deeponet.yaml
   - override /dataset: deeponet.yaml
+  - _self_
+
+epochs: 100

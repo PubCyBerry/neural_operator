@@ -13,15 +13,19 @@ class BaseDataset(Dataset):
     """Dataset Baseline All Datasets are inherited from this class."""
 
     def __init__(self, data_dir: str, filename: str, *args: Any, **kwargs: Any) -> None:
+        '''
+        all Dataset inherit this class
+        Note: torch.tensor has operand dtype(could be 64bit), but torch.Tensor has 32bit dtype
+        '''
         data_path: str = osp.join(data_dir, filename + ".npz")
         if not osp.exists(data_path):
             raise FileNotFoundError
 
         data = np.load(data_path)
         device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.xs: torch.tensor = torch.tensor(data["xs"]).to(device)  # (Nx,)
-        self.ts: torch.tensor = torch.tensor(data["ts"]).to(device)  # (Nt,)
-        self.ys: torch.tensor = torch.tensor(data["ys"]).to(device)  # (num_data, Nx, Nt)
+        self.xs: torch.tensor = torch.Tensor(data["xs"]).to(device)  # (Nx,)
+        self.ts: torch.tensor = torch.Tensor(data["ts"]).to(device)  # (Nt,)
+        self.ys: torch.tensor = torch.Tensor(data["ys"]).to(device)  # (num_data, Nx, Nt)
         self.coefficient: float = data["coefficient"]
 
         self.mesh: torch.tensor = make_mesh(self.xs, self.ts)

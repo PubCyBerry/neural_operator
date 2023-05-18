@@ -5,6 +5,6 @@ filename: ${filename}
 idx: 0
 num_data: 1000
 
-Nu: 20000
-Ni: 200
-Nb: 200
+Nu: 500000
+Ni: 512
+Nb: 512

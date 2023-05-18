@@ -18,7 +18,7 @@ defaults:
 # task name, determines output directory path
 task_name: train
 
-filename: Burgers_2048_0.1
+filename: Burgers_spectral_1024_512
 seed: 41 # for reproducibility
 epochs: 10
 train_test_split: [0.8, 0.2]

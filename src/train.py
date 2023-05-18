@@ -160,7 +160,7 @@ def main(cfg: DictConfig) -> Optional[float]:
                 is_best,
                 checkpoint_dir,
                 f"{model.__class__.__name__}.pth",
-                cfg.path.model_dir,
+                cfg.paths.model_dir,
                 cfg.model,
             )
             p.update(main_task, advance=1, description=f"[yellow]Best Metric: {best_metric:.4e}")

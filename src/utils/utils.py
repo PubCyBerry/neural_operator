@@ -1,4 +1,5 @@
 import os.path as osp
+from pathlib import Path
 import random
 import shutil
 import sys
@@ -92,7 +93,7 @@ def save_checkpoint(
         shutil.copyfile(checkpoint_path, checkpoint_path.replace(filename, "best_" + filename))
         if model_dir is not None:
             shutil.copyfile(checkpoint_path, osp.join(model_dir, filename))
-            OmegaConf.save(cfg, osp.join(model_dir, filename.replace(".pth", "yaml")))
+            OmegaConf.save(cfg, osp.join(model_dir, filename.replace(".pth", ".yaml")))
 
 
 def load_checkpoint(
@@ -106,6 +107,11 @@ def load_checkpoint(
     model.load_state_dict(checkpoint["state_dict"])
     return model
 
+def load_model(model_name: str = None, model_dir: Path = Path("models")) -> torch.nn.Module:
+    model_cfg: DictConfig = OmegaConf.load((model_dir / model_name).with_suffix(".yaml"))
+    checkpoint_path: Path = (model_dir / model_name).with_suffix(".pth")
+    model: torch.nn.Module = load_checkpoint(model_cfg, checkpoint_path)
+    return model
 
 def make_mesh(x: torch.tensor, y: torch.tensor) -> torch.tensor:
     """

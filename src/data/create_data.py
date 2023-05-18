@@ -87,7 +87,7 @@ class Data_Generator:
         #     method="LSODA",
         #     t_eval=self.ts,
         # ).y
-        return torch.tensor(s)
+        return torch.Tensor(s)
 
     @timing
     def create_data(

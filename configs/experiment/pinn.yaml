@@ -2,3 +2,6 @@
 defaults:
   - override /dataset: pinn.yaml
   - override /model: pinn.yaml
+  - _self_
+
+epochs: 100

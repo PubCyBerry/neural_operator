@@ -17,7 +17,7 @@ class Closure:
         coefficient: property of PDE instance
         dataset: (PINN) Hold collocation data from dataset
         """
-        self.coefficient: Optional[float] = dataset.coefficient
+        self.coefficient: Optional[torch.tensor] = torch.Tensor(dataset.coefficient)
 
         model_name: str = model_name.lower()
         if model_name == "dnn":
@@ -45,7 +45,7 @@ class Closure:
         self,
         model: torch.nn.Module,
         data: Tuple[torch.tensor, torch.tensor],
-        target: torch.Tensor,
+        target: torch.tensor,
         device: torch.device,
     ) -> torch.tensor:
         # Data-driven Loss
@@ -68,11 +68,11 @@ class Closure:
         loss_g: governing equation loss
         """
         loss_d = self.data_loss(model, data, target, device)
-        loss_ic = self.ic_loss(model, *self.ic_data.push_data(), device)
+        loss_ic = self.ic_loss(model, *self.ic_data.push_data(), device) 
         loss_bc = self.bc_loss(model, *self.bc_data.push_data(), device)
         loss_g = self.collocation_loss(model, self.col_data.push_data(), device)
 
-        loss = loss_d + loss_ic + loss_bc + loss_g
+        loss = loss_d + loss_ic/len(loss_ic) + loss_bc/len(loss_bc) + loss_g / len(loss_g)
         return loss
 
     def ic_loss(

@@ -2,3 +2,4 @@
 defaults:
   - override /dataset: dnn.yaml
   - override /model: dnn.yaml
+  - _self_
