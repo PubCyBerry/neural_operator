@@ -5,6 +5,7 @@ etc
 # Keep Directory only
 data/*
 !data/.gitkeep
+!data/pytest_data.npz
 notebooks/*
 !notebooks/.gitkeep
 logs/*

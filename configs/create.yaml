@@ -26,4 +26,5 @@ data_params:
   gamma: 2.5 # regularity of random field
   is_parallel: false # if true, use multiprocessing
 
-filename: ${now:%Y-%m-%d}_${now:%H-%M-%S}/${generator.target_pde}_${generator.Nx}_${generator.Nt}_${generator.coefficient} # name of data file
+# name of data file
+filename: ${now:%Y-%m-%d}_${now:%H-%M-%S}/${generator.target_pde}_${generator.Nx}_${generator.Nt} 
