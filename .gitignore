@@ -1,6 +1,5 @@
 etc
 .vscode
-logs
 
 # Don't commit these file
 # Keep Directory only
@@ -8,6 +7,8 @@ data/*
 !data/.gitkeep
 notebooks/*
 !notebooks/.gitkeep
+logs/*
+!logs/.gitkeep
 
 checkpoints/*
 !checkpoints/.gitkeep
