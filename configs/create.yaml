@@ -25,4 +25,4 @@ data_params:
   gamma: 2.5 # regularity of random field
   is_parallel: false # if true, use multiprocessing
 
-filename: ${generator.target_pde}_${Nx}_${Nt}_${coefficient} # name of data file
+filename: ${generator.target_pde}_${generator.Nx}_${generator.Nt}_${generator.coefficient} # name of data file
