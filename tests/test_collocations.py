@@ -6,14 +6,15 @@ from src.data.collocations import BC, IC, Collocator
 
 @pytest.mark.parametrize("num_data", [100])
 def test_collocations(num_data: int):
+    device:torch.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     Nx: int = 512
     Nt: int = 512
 
     xlim: tuple = (0, 1)
     tlim: tuple = (0, 1)
 
-    xs = torch.linspace(*xlim, Nx)
-    ts = torch.linspace(*tlim, Nt)
+    xs = torch.linspace(*xlim, Nx).to(device)
+    ts = torch.linspace(*tlim, Nt).to(device)
     values = torch.sin(xs)
 
     Ni: int = 100

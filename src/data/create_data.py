@@ -118,17 +118,3 @@ class Data_Generator:
             coefficient=self.coefficient,
         )
         print(f"Data saved at {os.path.join(self.data_dir, filename+'.npz')}")
-
-
-if __name__ == "__main__":
-    num_data: int = 10
-    Nx: int = 1024
-    Nt: int = 512
-    coefficient: float = 0.1
-    is_parallel: bool = False
-    generator = Data_Generator(
-        target_pde="Burgers_spectral", Nx=Nx, Nt=Nt, coefficient=coefficient
-    )
-    data = generator.create_data(num_data, is_parallel=is_parallel)
-    generator.save_data(f"Test_Burgers_{Nx}_{coefficient}", data)
-    # generator.save_data(f"Burgers_{Nx}_{coefficient}", data)

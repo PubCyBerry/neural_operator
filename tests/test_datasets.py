@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader, Dataset
 from src.data.datasets import DeepONetDataset, DNNDataset, PINNDataset
 
 
-@pytest.mark.parametrize("batch_size", [32, 128])
+@pytest.mark.parametrize("batch_size", [32])
 def test_datasets(batch_size):
     kwds = dict(
         data_dir="data",

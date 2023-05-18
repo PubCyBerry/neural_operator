@@ -10,7 +10,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 # user-defined libs
 from src.utils.closures import Closure
-from src.utils.utils import save_checkpoint, set_progress_bar, set_seed
+from src.utils.utils import set_progress_bar, set_seed
+from src.utils.utils import save_checkpoint
 
 # set pythonpath
 import pyrootutils
