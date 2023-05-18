@@ -3,9 +3,13 @@ import torch
 from omegaconf import DictConfig
 from torch.utils.data import Dataset
 
+# user-defined libs
 from src.utils.plotting import animate_solution, plot_solution
 from src.utils.utils import load_checkpoint
 
+# set pythonpath
+import pyrootutils
+pyrootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="eval.yaml")
 def main(cfg: DictConfig) -> None:

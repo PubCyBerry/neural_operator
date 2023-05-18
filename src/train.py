@@ -8,9 +8,13 @@ from omegaconf import DictConfig
 from torch.utils.data import DataLoader, Dataset, random_split
 from torch.utils.tensorboard import SummaryWriter
 
+# user-defined libs
 from src.utils.closures import Closure
 from src.utils.utils import save_checkpoint, set_progress_bar, set_seed
 
+# set pythonpath
+import pyrootutils
+pyrootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 
 def train(
     model: torch.nn.Module,
