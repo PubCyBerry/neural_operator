@@ -24,6 +24,8 @@ python src/train.py experiment=dnn
 python src/train.py experiment=pinn
 # Training DeepONet
 python src/train.py experiment=deeponet
+# Train multiple models
+python src/train.py --multirun experiment=dnn,pinn,deeponet
 ```
 
 - Inference
