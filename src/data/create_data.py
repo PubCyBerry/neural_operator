@@ -69,23 +69,23 @@ class Data_Generator:
         return: total solution (Nx, Nt)
         """
         # [Option 1]odeint
-        # s = integrate.odeint(
-        #     self.pde_solver,
-        #     y0=u_0,
-        #     t=torch.linspace(*self.tlim, self.Nt),
-        #     args=(self.xlim[1] - self.xlim[0], self.coefficient),
-        #     tfirst=True,
-        # ).T
-
-        # [Option 2]solve_ivp
-        s = integrate.solve_ivp(
+        s = integrate.odeint(
             self.pde_solver,
-            t_span=self.tlim,
-            y0=(u_0),
+            y0=u_0,
+            t=torch.linspace(*self.tlim, self.Nt),
             args=(self.xlim[1] - self.xlim[0], self.coefficient),
-            method="LSODA",
-            t_eval=self.ts,
-        ).y
+            tfirst=True,
+        ).T
+
+        # # [Option 2]solve_ivp
+        # s = integrate.solve_ivp(
+        #     self.pde_solver,
+        #     t_span=self.tlim,
+        #     y0=(u_0),
+        #     args=(self.xlim[1] - self.xlim[0], self.coefficient),
+        #     method="LSODA",
+        #     t_eval=self.ts,
+        # ).y
         return torch.tensor(s)
 
     @timing
