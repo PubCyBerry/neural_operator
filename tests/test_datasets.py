@@ -8,7 +8,7 @@ from src.data.datasets import DeepONetDataset, DNNDataset, PINNDataset
 def test_datasets(batch_size):
     kwds = dict(
         data_dir="data",
-        filename="Burgers_2048_0.1",
+        filename="Burgers_spectral_2048_512_0.01",
         num_data=5000,
         idx=0,
         num_input_sensors=128,
