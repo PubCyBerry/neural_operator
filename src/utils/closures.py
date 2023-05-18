@@ -72,7 +72,7 @@ class Closure:
         loss_bc = self.bc_loss(model, *self.bc_data.push_data(), device)
         loss_g = self.collocation_loss(model, self.col_data.push_data(), device)
 
-        loss = loss_d + loss_ic/len(loss_ic) + loss_bc/len(loss_bc) + loss_g / len(loss_g)
+        loss = loss_d + loss_ic + loss_bc + loss_g
         return loss
 
     def ic_loss(
@@ -84,8 +84,8 @@ class Closure:
     ) -> torch.tensor:
         # Enforce model follow initial condition
         preds = model(data)
-        loss = F.mse_loss(preds, target)
-        return loss
+        loss = F.mse_loss(preds, target) 
+        return loss / len(preds)
 
     def bc_loss(
         self,
@@ -98,7 +98,7 @@ class Closure:
         left_preds = model(left_data)
         right_preds = model(right_data)
         loss = F.mse_loss(left_preds, right_preds)
-        return loss
+        return loss / (len(left_preds) * len(right_preds))
 
     def collocation_loss(
         self, model: torch.nn.Module, data: Tuple[torch.tensor, torch.tensor], device: torch.device
@@ -110,7 +110,7 @@ class Closure:
         # Compute residual & loss
         residual = self.compute_Burgers(u, x, t)
         pde_loss = F.mse_loss(residual, torch.zeros_like(residual))
-        return pde_loss
+        return pde_loss / len(residual)
 
     def compute_Burgers(self, u: torch.Tensor, x: torch.Tensor, t: torch.Tensor) -> torch.tensor:
         # PDE Loss
