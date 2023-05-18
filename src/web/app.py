@@ -1,6 +1,4 @@
 # Type hint
-# Config
-from pathlib import Path
 from typing import Any, Optional, Tuple
 
 # webapp
@@ -13,7 +11,6 @@ from streamlit.components import v1 as components
 # ML backend
 import numpy as np
 import torch
-from omegaconf import DictConfig, OmegaConf
 
 
 # user-defined libs
@@ -31,6 +28,33 @@ def web_figure(target_func: str, *args: Any, **kwds: Any):
 def web_animation(target_func: str, *args: Any, **kwds: Any):
     anim = getattr(plotting, target_func)(*args, **kwds)
     components.html(anim.to_jshtml(), width=800, height=550, scrolling=False)
+
+
+def model_page(model_name: str):
+    with st.expander(model_name, expanded=True if f'button_{model_name}' in sess else False):
+        # Create batch
+        xcol, tcol, btn = st.columns(3)
+        Nx: int = xcol.number_input("Spatial Grids", value=sess.Nx, key=f"Nx_{model_name}")
+        Nt: int = tcol.number_input("Temporal Grids", value=sess.Nt, key=f"Nt_{model_name}")
+        btn.write("\n")
+        btn.write("\n")
+        if btn.button("Infer", use_container_width=True, key=f"button_{model_name}"):
+            model = load_model(model_name)
+            mesh = make_mesh(torch.linspace(*sess.xlim, Nx), torch.linspace(*sess.tlim, Nt)).cuda()
+
+            # Perform inference
+            if model_name == "DeepONet":
+                u = sess.data[:: sess.data.shape[0] // model.num_sensor, 0].unsqueeze(0).cuda()
+                preds = model((u, mesh)).view(Nx, Nt).detach().cpu()
+            else:
+                preds = model((mesh[:, :1], mesh[:, 1:])).view(Nx, Nt).detach().cpu()
+
+            # Plot result
+            with st.spinner("Drawing Full Field..."):
+                web_figure("plot_solution", sess.xlim, sess.tlim, sess.data, preds)
+            with st.spinner("Animating Solution..."):
+                web_animation("animate_solution", sess.xlim, sess.tlim, sess.data, preds, save_img=False)
+        # del sess[f"Nx_{model_name}"], sess[f"Nt_{model_name}"], sess[f"button_{model_name}"]
 
 
 #####################################
@@ -115,97 +139,24 @@ def main():
                 gamma=gamma,
                 is_parallel=is_parallel,
             ).squeeze()
-            st.success("Calculation Complete", icon="✅")
+            st.success("Done!", icon="✅")
 
     if top2.button("Load default", use_container_width=True):
         with st.spinner("Loading..."):
             data = np.load("data/demo.npz")
             sess.data = torch.Tensor(data["ys"])
-            st.success("Calculation Complete", icon="✅")
+            st.success("Done!", icon="✅")
 
     if top3.button("Plot Solution", use_container_width=True) and "data" in sess:
         with st.expander("Solution", expanded=True):
             with st.spinner("Drawing Full Field..."):
-                web_figure("plot_solution", sess.generator.xs, sess.generator.ts, sess.data)
+                web_figure("plot_solution", sess.xlim, sess.tlim, sess.data)
             with st.spinner("Animating Solution..."):
-                web_animation(
-                    "animate_solution",
-                    sess.generator.xs,
-                    sess.data,
-                    sess.generator.ts,
-                    save_img=False,
-                )
+                web_animation("animate_solution", sess.xlim, sess.tlim, sess.data, save_img=False)
 
-    with st.expander("DNN"):
-        model_name = "DNN"
-
-        # Create batch
-        xcol, tcol, btn = st.columns(3)
-        Nx: int = xcol.number_input("Spatial Grids", value=sess.Nx, key=f"Nx_{model_name}")
-        Nt: int = tcol.number_input("Temporal Grids", value=sess.Nt, key=f"Nt_{model_name}")
-        btn.write("\n")
-        btn.write("\n")
-        if btn.button("Infer", use_container_width=True, key=f"button_{model_name}"):
-            model = load_model(model_name)
-            data = make_mesh(torch.linspace(*sess.xlim, Nx), torch.linspace(*sess.tlim, Nt)).cuda()
-
-            # Perform inference
-            preds = model((data[:, :1], data[:, 1:])).view(Nx, Nt).detach().cpu()
-
-            # Plot result
-            with st.spinner("Drawing Full Field..."):
-                web_figure("plot_solution", sess.xlim, sess.tlim, sess.data, preds)
-            with st.spinner("Animating Solution..."):
-                web_animation("animate_solution", sess.xlim, sess.tlim, sess.data, preds, save_img=False)
-        del sess[f"Nx_{model_name}"], sess[f"Nt_{model_name}"], sess[f"button_{model_name}"]
-
-    with st.expander("PINN"):
-        model_name = "PINN"
-
-        # Create batch
-        xcol, tcol, btn = st.columns(3)
-        Nx: int = xcol.number_input("Spatial Grids", value=sess.Nx, key=f"Nx_{model_name}")
-        Nt: int = tcol.number_input("Temporal Grids", value=sess.Nt, key=f"Nt_{model_name}")
-        btn.write("\n")
-        btn.write("\n")
-        if btn.button("Infer", use_container_width=True, key=f"button_{model_name}"):
-            model = load_model(model_name)
-            data = make_mesh(torch.linspace(*sess.xlim, Nx), torch.linspace(*sess.tlim, Nt)).float().cuda()
-
-            # Perform inference
-            preds = model((data[:, :1], data[:, 1:])).view(Nx, Nt).detach().cpu()
-
-            # Plot result
-            with st.spinner("Drawing Full Field..."):
-                web_figure("plot_solution", sess.xlim, sess.tlim, sess.data, preds)
-            with st.spinner("Animating Solution..."):
-                web_animation("animate_solution", sess.xlim, sess.tlim, sess.data, preds, save_img=False)
-        del sess[f"Nx_{model_name}"], sess[f"Nt_{model_name}"], sess[f"button_{model_name}"]
-
-    with st.expander("DeepONet"):
-        model_name = "DeepONet"
-
-        # Create batch
-        xcol, tcol, btn = st.columns(3)
-        Nx: int = xcol.number_input("Spatial Grids", value=sess.Nx, key=f"Nx_{model_name}")
-        Nt: int = tcol.number_input("Temporal Grids", value=sess.Nt, key=f"Nt_{model_name}")
-        btn.write("\n")
-        btn.write("\n")
-        if btn.button("Infer", use_container_width=True, key=f"button_{model_name}"):
-            model = load_model(model_name)
-            y = make_mesh(torch.linspace(*sess.xlim, Nx), torch.linspace(*sess.tlim, Nt)).cuda()
-            u = sess.data[:: sess.data.shape[0] // model.num_sensor, 0].unsqueeze(0).cuda()
-            st.write(Nx, y.size(), u.size())
-            preds = model((u, y)).view(Nx, Nt).detach().cpu()
-            st.write(preds.shape)
-            # Plot result
-            with st.spinner("Drawing Full Field..."):
-                web_figure("plot_solution", sess.xlim, sess.tlim, sess.data, preds)
-            with st.spinner("Animating Solution..."):
-                web_animation("animate_solution", sess.xlim, sess.tlim, sess.data, preds, save_img=False)
-
-        del sess[f"Nx_{model_name}"], sess[f"Nt_{model_name}"], sess[f"button_{model_name}"]
-    st.sidebar.write(sess)
+    model_page("DNN")
+    model_page("PINN")
+    model_page("DeepONet")
 
 
 if __name__ == "__main__":
