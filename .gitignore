@@ -3,17 +3,20 @@ etc
 
 # Don't commit these file
 # Keep Directory only
+# Data
 data/*
 !data/.gitkeep
 !data/pytest_data.npz
 !data/demo.npz
+# Notebooks
 notebooks/*
 !notebooks/.gitkeep
+# Logs
 logs/*
 !logs/.gitkeep
-
-checkpoints/*
-!checkpoints/.gitkeep
+# Models
+models/*
+!models/.gitkeep
 
 # Don't commit test file
 test.ipynb
