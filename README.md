@@ -36,7 +36,10 @@ python src/eval.py model=deeponet ckpt_path=<path/to/ckpt.pth>
 - Coverage
 
 ```bash
+# test all
 pytest
+# test specific file
+pytest tests/test_collocations.py
 ```
 
 ## Setup
