@@ -1,11 +1,28 @@
 # PDE with Deep Learning
 
 - [PDE with Deep Learning](#pde-with-deep-learning)
+  - [Preview](#preview)
+    - [DeepONet](#deeponet)
+    - [Fourier Neural Operator](#fourier-neural-operator)
   - [Usage](#usage)
   - [Setup](#setup)
   - [References](#references)
     - [Physincs Informed Neural Network(PINN)s](#physincs-informed-neural-networkpinns)
     - [Neural Operators](#neural-operators)
+
+## Preview
+
+### DeepONet
+
+| Full Field                            | Animation                            |
+| ----------------------------------- | ----------------------------------- |
+| ![fig](docs/Result%20-%20best_DeepONet.png) | ![gif](dics/../docs/Result%20-%20best_DeepONet.gif)
+
+### Fourier Neural Operator
+
+| Full Field                            | Animation                            |
+| ----------------------------------- | ----------------------------------- |
+| ![fig](docs/Result%20-%20FNO.png) | ![gif](dics/../docs/Result%20-%20FNO.gif)
 
 ## Usage
 
