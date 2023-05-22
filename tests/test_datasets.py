@@ -1,7 +1,7 @@
 import pytest
 from torch.utils.data import DataLoader, Dataset
 
-from src.data.datasets import DeepONetDataset, DNNDataset, PINNDataset
+from src.data.datasets import DeepONetDataset, DNNDataset, PINNDataset, FNODataset
 
 
 @pytest.mark.parametrize("batch_size", [32])
@@ -13,6 +13,8 @@ def test_datasets(batch_size):
         idx=0,
         num_input_sensors=128,
         num_output_sensors=100,
+        grid_x=128,
+        grid_t=32,
         batch_size=batch_size,
     )
 
@@ -29,3 +31,4 @@ def test_datasets(batch_size):
     test_dataset(DNNDataset, **kwds)
     test_dataset(PINNDataset, **kwds)
     test_dataset(DeepONetDataset, **kwds)
+    test_dataset(FNODataset, **kwds)

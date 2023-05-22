@@ -1,11 +1,11 @@
-import os.path as osp
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from src.data.collocations import BC, IC, Collocator
+from src.data.collocations import IC, BC, Collocator
 from src.utils.utils import make_mesh
 
 
@@ -13,12 +13,12 @@ class BaseDataset(Dataset):
     """Dataset Baseline All Datasets are inherited from this class."""
 
     def __init__(self, data_dir: str, filename: str, *args: Any, **kwargs: Any) -> None:
-        '''
+        """
         all Dataset inherit this class
         Note: torch.tensor has operand dtype(could be 64bit), but torch.Tensor has 32bit dtype
-        '''
-        data_path: str = osp.join(data_dir, filename + ".npz")
-        if not osp.exists(data_path):
+        """
+        data_path: Path = (Path(data_dir) / filename).with_suffix(".npz")
+        if not data_path.exists():
             raise FileNotFoundError
 
         data = np.load(data_path)
@@ -174,5 +174,41 @@ class DeepONetDataset(BaseDataset):
         return (u, y), s
 
 
-if __name__ == "__main__":
-    pass
+class FNODataset(BaseDataset):
+    def __init__(
+        self,
+        data_dir: str,
+        filename: str,
+        grid_x: int,
+        num_step: int = 32,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(data_dir, filename, *args, **kwargs)
+        # prepare u
+        # (num_data, grid_x, first_n_steps)
+        sub_x: int = len(self.xs) // grid_x  # subsampling
+        self.u = self.ys[:, ::sub_x, :num_step]
+        assert self.u.shape[1:] == (grid_x, num_step)
+
+        # prepare y
+        # (grid_x, 1)
+        self.y = self.xs[::sub_x].unsqueeze(-1)
+        assert self.y.shape == (grid_x, 1)
+
+        # prepare s
+        # (num_data, grid_x, Nt)
+        self.s = self.ys[:, ::sub_x, :]
+        assert self.s.shape[1:] == (grid_x, len(self.ts))
+
+    def __len__(self):
+        return len(self.u)
+
+    def __getitem__(self, idx):
+        # u: (batch, num_grid, num_step)
+        # y: (batch, num_grid, 1)
+        # s: (batch, num_grid, Nt)
+        u = self.u[idx]
+        y = self.y
+        s = self.s[idx]
+        return (u, y), s

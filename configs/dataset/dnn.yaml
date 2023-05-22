@@ -2,5 +2,5 @@ _target_: src.data.datasets.DNNDataset
 
 data_dir: ${paths.data_dir}
 filename: ${filename}
-idx: 0
-num_data: 100000
+idx: 0 # index of instance to train
+num_data: 100000 # number of data to use

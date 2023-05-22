@@ -1,0 +1,14 @@
+_target_: src.data.create_data.Data_Generator
+target_pde: Burgers_spectral # pde solver
+xlim: [0.0, 1.0] # spatial domain
+tlim: [0.0, 1.0] # temporal domain
+Nx: 1024 # 2^10 = 1024, spatial resolution
+Nt: 512 # 2^9 = 512, temporal resolution
+coefficient: 1e-2 # physical property of pde, kinematic viscosity
+data_dir: ${paths.data_dir}/ # path to save data
+backend: torch # backend for computing (numpy / torch / jax / ...)
+m: 0 # mean vector
+sigma: 49 # scaling factor
+tau: 7 # inverse length scale of random field
+gamma: 2.5 # regularity of random field
+is_parallel: false # if true, use multiprocessing

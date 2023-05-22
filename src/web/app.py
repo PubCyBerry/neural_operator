@@ -11,6 +11,7 @@ from streamlit.components import v1 as components
 # ML backend
 import numpy as np
 import torch
+import gc
 
 
 # user-defined libs
@@ -20,18 +21,22 @@ from src.data.create_data import Data_Generator
 
 
 ############ CONTENTS ###############
-def web_figure(target_func: str, *args: Any, **kwds: Any):
-    fig = getattr(plotting, target_func)(*args, **kwds)
+@st.cache_data
+def web_figure(tag:str, target_func: str, _xs:torch.tensor, _ts:torch.tensor, _ys:torch.tensor, _preds:torch.tensor=None, *args: Any, **kwds: Any):
+    fig_tag = tag
+    fig = getattr(plotting, target_func)(_xs, _ts, _ys, _preds, *args, **kwds)
     st.pyplot(fig)
 
 
-def web_animation(target_func: str, *args: Any, **kwds: Any):
-    anim = getattr(plotting, target_func)(*args, **kwds)
+@st.cache_data
+def web_animation(tag:str, target_func: str, _xs:torch.tensor, _ts:torch.tensor, _ys:torch.tensor, _preds:torch.tensor=None, *args: Any, **kwds: Any):
+    anim_tag = tag
+    anim = getattr(plotting, target_func)(_xs, _ts, _ys, _preds, *args, **kwds)
     components.html(anim.to_jshtml(), width=800, height=550, scrolling=False)
 
 
 def model_page(model_name: str):
-    with st.expander(model_name, expanded=True if f'button_{model_name}' in sess else False):
+    with st.expander(model_name, expanded=True):
         # Create batch
         xcol, tcol, btn = st.columns(3)
         Nx: int = xcol.number_input("Spatial Grids", value=sess.Nx, key=f"Nx_{model_name}")
@@ -40,20 +45,29 @@ def model_page(model_name: str):
         btn.write("\n")
         if btn.button("Infer", use_container_width=True, key=f"button_{model_name}"):
             model = load_model(model_name)
-            mesh = make_mesh(torch.linspace(*sess.xlim, Nx), torch.linspace(*sess.tlim, Nt)).cuda()
+            mesh = make_mesh(torch.linspace(*sess.xlim, Nx), torch.linspace(*sess.tlim, Nt))
 
             # Perform inference
             if model_name == "DeepONet":
-                u = sess.data[:: sess.data.shape[0] // model.num_sensor, 0].unsqueeze(0).cuda()
-                preds = model((u, mesh)).view(Nx, Nt).detach().cpu()
+                u = sess.data[:: sess.data.shape[0] // model.num_sensor, 0].unsqueeze(0)
+                preds = model((u.cuda(), mesh.cuda())).view(Nx, Nt).detach().cpu()
+
+            elif model_name == "FNO":
+                u = sess.data[:, :1].unsqueeze(0)
+                preds = (
+                    model.repeat((u.cuda(), torch.linspace(*sess.xlim, u.shape[1]).view(1, -1, 1).cuda()), Nt)
+                    .view(Nx, Nt)
+                    .detach()
+                    .cpu()
+                )
             else:
-                preds = model((mesh[:, :1], mesh[:, 1:])).view(Nx, Nt).detach().cpu()
+                preds = model((mesh[:, :1].cuda(), mesh[:, 1:].cuda())).view(Nx, Nt).detach().cpu()
 
             # Plot result
             with st.spinner("Drawing Full Field..."):
-                web_figure("plot_solution", sess.xlim, sess.tlim, sess.data, preds)
+                web_figure(f'{model_name}_Fig',"plot_solution", sess.xlim, sess.tlim, sess.data, preds)
             with st.spinner("Animating Solution..."):
-                web_animation("animate_solution", sess.xlim, sess.tlim, sess.data, preds, save_img=False)
+                web_animation(f'{model_name}_Anim',"animate_solution", sess.xlim, sess.tlim, sess.data, preds, save_img=False)
         # del sess[f"Nx_{model_name}"], sess[f"Nt_{model_name}"], sess[f"button_{model_name}"]
 
 
@@ -65,6 +79,7 @@ def main():
     app_title: str = "PDE with Deep Learning"
     st.set_page_config(page_title=app_title, page_icon=":hourglass:")
     st.title(app_title)
+
 
     top_container = st.container()
     top1, top2, top3 = top_container.columns([1, 1, 1])
@@ -106,6 +121,7 @@ def main():
             coefficient=coefficient,
             data_dir="data",
             backend="torch",
+            device=torch.device('cpu')
         )
 
     with st.expander("Initial Condition Configuration"):
@@ -150,13 +166,15 @@ def main():
     if top3.button("Plot Solution", use_container_width=True) and "data" in sess:
         with st.expander("Solution", expanded=True):
             with st.spinner("Drawing Full Field..."):
-                web_figure("plot_solution", sess.xlim, sess.tlim, sess.data)
+                web_figure('Solution_Fig',"plot_solution", sess.xlim, sess.tlim, sess.data)
             with st.spinner("Animating Solution..."):
-                web_animation("animate_solution", sess.xlim, sess.tlim, sess.data, save_img=False)
+                web_animation('Solution_Anim',"animate_solution", sess.xlim, sess.tlim, sess.data, save_img=False)
 
     model_page("DNN")
     model_page("PINN")
     model_page("DeepONet")
+    model_page("FNO")
+
 
 
 if __name__ == "__main__":

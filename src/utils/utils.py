@@ -1,16 +1,11 @@
-import os.path as osp
-from pathlib import Path
 import random
-import shutil
 import sys
 import time
 from functools import wraps
 from typing import Any, Optional
 
-import hydra
 import numpy as np
 import torch
-from omegaconf import DictConfig, OmegaConf
 from rich.progress import (
     BarColumn,
     MofNCompleteColumn,
@@ -19,6 +14,16 @@ from rich.progress import (
     TimeElapsedColumn,
     TimeRemainingColumn,
 )
+
+
+def make_mesh(x: torch.tensor, y: torch.tensor) -> torch.tensor:
+    """
+    create 2d coordinate
+    return: (Nx x Nt, 2)
+    """
+    xx, yy = torch.meshgrid(x, y, indexing="ij")
+    xy = torch.stack([xx, yy], axis=2)
+    return xy.reshape(-1, 2)
 
 
 def set_progress_bar():
@@ -60,64 +65,3 @@ def timing(f: callable) -> callable:
         return result
 
     return wrapper
-
-
-def save_checkpoint(
-    epoch: Optional[int],
-    model: torch.nn.Module,
-    best_metric: float,
-    optimizer: torch.optim.Optimizer,
-    is_best: bool = False,
-    checkpoint_dir: str = "checkpoints",
-    filename: str = "checkpoint.pth",
-    model_dir: str = None,
-    cfg: DictConfig = None,
-) -> None:
-    """save model.
-
-    # ref:
-    # https://github.com/pytorch/examples/blob/1de2ff9338bacaaffa123d03ce53d7522d5dcc2e/imagenet/main.py#L287
-    """
-
-    checkpoint_path: str = osp.join(checkpoint_dir, filename)
-    torch.save(
-        {
-            "epoch": epoch + 1,
-            "state_dict": model.state_dict(),
-            "best_metric": best_metric,
-            "optimizer": optimizer.state_dict(),
-        },
-        checkpoint_path,
-    )
-    if is_best:
-        shutil.copyfile(checkpoint_path, checkpoint_path.replace(filename, "best_" + filename))
-        if model_dir is not None:
-            shutil.copyfile(checkpoint_path, osp.join(model_dir, filename))
-            OmegaConf.save(cfg, osp.join(model_dir, filename.replace(".pth", ".yaml")))
-
-
-def load_checkpoint(
-    cfg: DictConfig,
-    ckpt_path: str = "checkpoint.pth",
-    device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-) -> torch.nn.Module:
-    """load model."""
-    checkpoint = torch.load(ckpt_path)
-    model = hydra.utils.instantiate(cfg).to(device)
-    model.load_state_dict(checkpoint["state_dict"])
-    return model
-
-def load_model(model_name: str = None, model_dir: Path = Path("models")) -> torch.nn.Module:
-    model_cfg: DictConfig = OmegaConf.load((model_dir / model_name).with_suffix(".yaml"))
-    checkpoint_path: Path = (model_dir / model_name).with_suffix(".pth")
-    model: torch.nn.Module = load_checkpoint(model_cfg, checkpoint_path)
-    return model
-
-def make_mesh(x: torch.tensor, y: torch.tensor) -> torch.tensor:
-    """
-    create 2d coordinate
-    return: (Nx x Nt, 2)
-    """
-    xx, yy = torch.meshgrid(x, y, indexing="ij")
-    xy = torch.stack([xx, yy], axis=2)
-    return xy.reshape(-1, 2)

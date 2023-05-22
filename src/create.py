@@ -14,7 +14,7 @@ def main(cfg: DictConfig) -> None:
     - hyperparameter for this task refers configs/create.yaml
     """
     generator: object = hydra.utils.instantiate(cfg.generator)
-    data: torch.tensor = generator.create_data(**cfg.data_params)
+    data: torch.tensor = generator.create_data(cfg.num_data)
     generator.save_data(cfg.filename, data)
 
 

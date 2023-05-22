@@ -13,22 +13,38 @@ import src.data.solver as solver
 
 # import user-defined libs
 from src.data.function_spaces import GRF
-from src.utils.utils import timing
+from src.utils.utils import timing, make_mesh
 
 
 @dataclass
 class Data_Generator:
+    # pde params
     target_pde: str = "Burgers_spectral"
-    xlim: Tuple[float, float] = (0.0, +1.0)
-    tlim: Tuple[float, float] = (0.0, +1.0)
-    Nx: int = 2**10  # 2^10 = 1024
-    Nt: int = 2**9  # 2^9  = 512
-    coefficient: float = 0.1
-    data_dir: Path = Path("data")
+    xlim: Tuple[float, float] = (0, 1)
+    tlim: Tuple[float, float] = (0, 1)
+    Nx: int = 1024
+    Nt: int = 512
+    coefficient: float = 0.01
     backend: str = "torch"
-    space: callable = GRF(backend)
+    device: torch.device = torch.device("cpu")
+    # data params
     pde_solver: callable = getattr(solver, target_pde)
-    device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    space: callable = GRF(backend)
+    m: float = 0.0
+    sigma: float = 49.0
+    tau: float = 7.0
+    gamma: float = 2.5
+    is_parallel: bool = False
+    data_dir: Path = Path("data")
+
+    @property
+    def full_name(self):
+        return {
+            "DNN": "Deep Neural Network",
+            "PINN": "Physics Informed Neural Network",
+            "DeepONet": "Deep Operator Network",
+            "FNO": "Fourier Neural Operator",
+        }
 
     @property
     def xs(self):
@@ -38,28 +54,29 @@ class Data_Generator:
     def ts(self):
         return torch.linspace(*self.tlim, self.Nt)
 
-    def sample_random_function(
-        self,
-        num_data: int = 1,
-        m: float = 0,
-        sigma: float = 7**2,
-        tau: float = 7,
-        gamma: float = 2.5,
-    ) -> torch.tensor:
+    @property
+    def mesh(self):
+        return make_mesh(self.xs, self.ts)
+
+    @property
+    def data_params(self):
+        return {
+            "m": self.m,
+            "sigma": self.sigma,
+            "tau": self.tau,
+            "gamma": self.gamma,
+        }
+
+    def sample_random_function(self, num_data: int = 1) -> torch.tensor:
         """
         return: torch.tensor (num_data, Nx,)
         """
         if num_data == 1:
-            u = self.space(
-                N=self.Nx // 2, m=m, sigma=sigma, tau=tau, gamma=gamma, device=self.device
-            )
+            u = self.space(N=self.Nx // 2, **self.data_params)
             return u[: self.Nx].unsqueeze(0)  # u[:-1]
         else:
             u = torch.cat(
-                [
-                    self.sample_random_function(m=m, sigma=sigma, tau=tau, gamma=gamma)
-                    for _ in range(num_data)
-                ],
+                [self.sample_random_function(**self.data_params) for _ in range(num_data)],
                 dim=0,
             )
             return u
@@ -73,12 +90,13 @@ class Data_Generator:
         s = integrate.odeint(
             self.pde_solver,
             y0=u_0,
-            t=torch.linspace(*self.tlim, self.Nt),
+            t=self.ts,
             args=(self.xlim[1] - self.xlim[0], self.coefficient),
             tfirst=True,
         ).T
 
         # # [Option 2]solve_ivp
+        # # Not working on Windows
         # s = integrate.solve_ivp(
         #     self.pde_solver,
         #     t_span=self.tlim,
@@ -90,18 +108,10 @@ class Data_Generator:
         return torch.Tensor(s)
 
     @timing
-    def create_data(
-        self,
-        num_data: int = 1000,
-        m: float = 0,
-        sigma: float = 7**2,
-        tau: float = 7,
-        gamma: float = 2.5,
-        is_parallel: bool = False,
-    ):
-        u = self.sample_random_function(num_data, m, sigma, tau, gamma)
+    def create_data(self, num_data: int = 1000):
+        u = self.sample_random_function(num_data)
 
-        if is_parallel:
+        if self.is_parallel:
             p = ProcessPool(nodes=os.cpu_count())
             s = p.map(self.solve_PDE, u.cpu())
         else:
@@ -109,8 +119,8 @@ class Data_Generator:
         s = torch.stack(s, dim=0)
         return s
 
-    def save_data(self, filename: str, data: np.array) -> None:
-        file_path = (Path(self.data_dir) / filename).with_suffix('.npz')
+    def save_data(self, filename: str, data: torch.tensor) -> None:
+        file_path = (Path(self.data_dir) / filename).with_suffix(".npz")
         file_path.parent.mkdir(parents=True, exist_ok=True)
         np.savez(
             file_path,
@@ -118,5 +128,6 @@ class Data_Generator:
             ts=self.ts,
             ys=data,
             coefficient=self.coefficient,
+            data_params=self.data_params,
         )
         print(f"Data saved at {file_path}")

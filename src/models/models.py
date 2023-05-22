@@ -76,18 +76,19 @@ class DeepONet(BaseNN):
     def __init__(
         self,
         branch_dim: int = 128,
-        hidden_dim: int = 20,
+        branch_layers: int = 3,
         trunk_dim: int = 2,
-        n_layers: int = 3,
+        trunk_layers: int = 3,
+        hidden_dim: int = 20,
         activation: str = "lrelu",
     ) -> None:
         super().__init__()
-        branch_layer = [branch_dim] + [hidden_dim] * n_layers
-        trunk_layer = [trunk_dim] + [hidden_dim] * n_layers
+        branch_layer = [branch_dim] + [hidden_dim] * branch_layers
+        trunk_layer = [trunk_dim] + [hidden_dim] * trunk_layers
         self.num_sensor: int = branch_dim
 
-        self.branch_net = dense_block(branch_layer, activation, f_last=True)
-        self.trunk_net = dense_block(trunk_layer, activation, f_last=True)
+        self.branch_net = dense_block(branch_layer, activation, f_last=False)
+        self.trunk_net = dense_block(trunk_layer, activation, f_last=False)
         self.b0 = nn.Parameter(torch.zeros((1,)), requires_grad=True)
 
         self.apply(self._init_weights)
@@ -106,8 +107,16 @@ class DeepONet(BaseNN):
         return s
 
 
-class FNO1d(BaseNN):
-    def __init__(self, modes: int, width: int, hidden_dim: int = 128) -> None:
+class FNO(BaseNN):
+    def __init__(
+        self,
+        num_step: int = 1,
+        n_dimension: int = 1,
+        modes: int = 16,
+        width: int = 32,
+        hidden_dim: int = 128,
+        activation="gelu",
+    ) -> None:
         super().__init__()
 
         """
@@ -122,10 +131,12 @@ class FNO1d(BaseNN):
         output: the solution of a later timestep
         output shape: (batchsize, x=s, c=1)
         """
+        self.num_step = num_step
+        self.n_dimension = n_dimension
 
         self.modes1: int = modes
         self.width: int = width
-        self.fc0 = nn.Linear(2, self.width)  # input channel is 2: (a(x), x)
+        self.fc0 = nn.Linear(num_step + n_dimension, self.width)  # input channel is : (a(x,t[ti ~ to]), x)
 
         self.conv0 = SpectralConv1d(self.width, self.width, self.modes1)
         self.conv1 = SpectralConv1d(self.width, self.width, self.modes1)
@@ -139,26 +150,42 @@ class FNO1d(BaseNN):
         self.fc1 = nn.Linear(self.width, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, 1)
 
-    def forward(self, ax: torch.tensor) -> torch.tensor:
-        # (batch, resolution, 2) -> (batch, resolution, width)
-        x = self.fc0(ax)
+        self.activation = getattr(F, activation)
+
+    def forward(self, axt: list):
+        ax, total_step = axt
+        # step = 1
+        preds = ax[0]  # t = t_init (batch, grid_x, num_step)
+        for t in range(total_step - self.num_step):
+            # (batch, grid_x, 1)
+            im = self.forward_step(ax)
+            # (batch, grid_x, num_step + t)
+            preds = torch.cat([preds, im], -1)
+            # (batch, grid_x, num_step), (batch, grid_x, n_dimension)
+            ax = (preds[..., t + 1 :], ax[1])
+
+        return preds  # (batch, grid_x, total_step)
+
+    def forward_step(self, ax: list) -> torch.tensor:
+        # (batch, resolution, num_step + n_dimension) -> (batch, resolution, width)
+        x = self.fc0(torch.cat(ax, -1))
         # (batch, width, resolution)
         x = x.permute(0, 2, 1)
 
         x1 = self.conv0(x)
         x2 = self.w0(x)
         x = x1 + x2
-        x = F.leaky_relu(x)
+        x = self.activation(x)
 
         x1 = self.conv1(x)
         x2 = self.w1(x)
         x = x1 + x2
-        x = F.leaky_relu(x)
+        x = self.activation(x)
 
         x1 = self.conv2(x)
         x2 = self.w2(x)
         x = x1 + x2
-        x = F.leaky_relu(x)
+        x = self.activation(x)
 
         x1 = self.conv3(x)
         x2 = self.w3(x)
@@ -168,7 +195,7 @@ class FNO1d(BaseNN):
         x = x.permute(0, 2, 1)
         # (batch, resolution, hidden_dim)
         x = self.fc1(x)
-        x = F.leaky_relu(x)
+        x = self.activation(x)
         # (batch, resolution, 1)
         x = self.fc2(x)
         return x

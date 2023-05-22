@@ -4,4 +4,26 @@ defaults:
   - override /dataset: deeponet.yaml
   - _self_
 
+model:
+  # Branch Network
+  branch_dim: 512
+  branch_layers: 4
+
+  # Trunk Network
+  trunk_dim: 2
+  trunk_layers: 4
+
+  # activation
+  hidden_dim: 512
+  activation: tanh
+
+
+
+dataset:
+  num_input_sensors: ${model.branch_dim}
+  num_output_sensors: 2048
+
+loader:
+  batch_size: 128
+
 epochs: 100

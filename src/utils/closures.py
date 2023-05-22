@@ -9,9 +9,7 @@ grad_kwargs: dict = {"create_graph": True, "retain_graph": True}
 
 
 class Closure:
-    def __init__(
-        self, model_name: str, dataset: Optional[Dataset], *args: Any, **kwds: Any
-    ) -> None:
+    def __init__(self, model_name: str, dataset: Optional[Dataset], *args: Any, **kwds: Any) -> None:
         """
         model_name: key for closure
         coefficient: property of PDE instance
@@ -33,10 +31,8 @@ class Closure:
             self.closure = self.data_loss
 
         elif model_name == "fno":
-            return NotImplementedError
-
-        elif model_name == "fno-time":
-            return NotImplementedError
+            self.total_step = len(dataset.ts)
+            self.closure = self.fno_loss
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         return self.closure(*args, **kwds)
@@ -68,7 +64,7 @@ class Closure:
         loss_g: governing equation loss
         """
         loss_d = self.data_loss(model, data, target, device)
-        loss_ic = self.ic_loss(model, *self.ic_data.push_data(), device) 
+        loss_ic = self.ic_loss(model, *self.ic_data.push_data(), device)
         loss_bc = self.bc_loss(model, *self.bc_data.push_data(), device)
         loss_g = self.collocation_loss(model, self.col_data.push_data(), device)
 
@@ -84,7 +80,7 @@ class Closure:
     ) -> torch.tensor:
         # Enforce model follow initial condition
         preds = model(data)
-        loss = F.mse_loss(preds, target) 
+        loss = F.mse_loss(preds, target)
         return loss / len(preds)
 
     def bc_loss(
@@ -119,3 +115,68 @@ class Closure:
         u_x = grad(u, x, grad_outputs=torch.ones_like(u), **grad_kwargs)[0]
         u_xx = grad(u, x, grad_outputs=torch.ones_like(u), **grad_kwargs)[0]
         return u_t + u * u_x - self.coefficient * u_xx
+
+    def fno_loss(
+        self,
+        model: torch.nn.Module,
+        data: Tuple[torch.tensor, torch.tensor],
+        target: torch.tensor,
+        device: torch.device,
+    ) -> torch.tensor:
+        """
+        data: (batch, num_grid, 1), (batch, num_grid, 1)
+        """
+        batch_size = len(target)
+        preds = model((data, self.total_step))
+        # (batch, num_grid, num_t) -> (batch, num_grid * num_t)
+        loss = F.mse_loss(preds.view(batch_size, -1), target.view(batch_size, -1), reduction="mean")
+        return loss
+
+
+# loss function with rel/abs Lp loss
+class LpLoss(object):
+    def __init__(self, d=2, p=2, size_average=True, reduction=True):
+        super(LpLoss, self).__init__()
+
+        # Dimension and Lp-norm type are positive
+        assert d > 0 and p > 0
+
+        self.d = d
+        self.p = p
+        self.reduction = reduction
+        self.size_average = size_average
+
+    def abs(self, x, y):
+        num_examples = x.size()[0]
+
+        # Assume uniform mesh
+        h = 1.0 / (x.size()[1] - 1.0)
+
+        all_norms = (h ** (self.d / self.p)) * torch.norm(
+            x.view(num_examples, -1) - y.view(num_examples, -1), self.p, 1
+        )
+
+        if self.reduction:
+            if self.size_average:
+                return torch.mean(all_norms)
+            else:
+                return torch.sum(all_norms)
+
+        return all_norms
+
+    def rel(self, x, y):
+        num_examples = x.size()[0]
+
+        diff_norms = torch.norm(x.reshape(num_examples, -1) - y.reshape(num_examples, -1), self.p, 1)
+        y_norms = torch.norm(y.reshape(num_examples, -1), self.p, 1)
+
+        if self.reduction:
+            if self.size_average:
+                return torch.mean(diff_norms / y_norms)
+            else:
+                return torch.sum(diff_norms / y_norms)
+
+        return diff_norms / y_norms
+
+    def __call__(self, x, y):
+        return self.rel(x, y)

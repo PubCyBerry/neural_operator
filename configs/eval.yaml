@@ -1,30 +1,28 @@
 # @package _global_
 defaults:
   - _self_
-  - model: dnn.yaml
-  - dataset: dnn.yaml
   - paths: default.yaml
   - hydra: default.yaml
+  - generator: default.yaml
 
-result_dir: ${paths.output_dir}/results
-filename: Burgers_2048_0.1
 seed: 41
 
-ckpt_path: null # saved model path for inference
-model_name: ${model._target_}
+model_name: null 
+ckpt_dir: ${paths.model_dir}
+is_training: False
 
 plot:
-  save_img: True
-  show_img: False
   title: Result - ${model_name}
-  filename: ${model_name}_result
-  result_dir: ${result_dir}
+  filename: Result - ${model_name}
+  result_dir: ${paths.output_dir}
 
 animate:
-  save_img: False
-  interval: 10
+  interval: 50
   fps: 60
   filename: Result - ${model_name}
-  result_dir: ${result_dir}
+  result_dir: ${paths.output_dir}
+  num_x: 256
+  num_t: 128
 
-task_name: "eval"
+# task name, determines output directory path
+task_name: eval

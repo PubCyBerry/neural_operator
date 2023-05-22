@@ -1,7 +1,13 @@
 _target_: src.models.models.DeepONet
 
+# Branch Network
 branch_dim: 512
-hidden_dim: 20
+branch_layers: 2
+
+# Trunk Network
 trunk_dim: 2
-n_layers: 8
+trunk_layers: 4
+
+# activation
+hidden_dim: 512
 activation: lrelu

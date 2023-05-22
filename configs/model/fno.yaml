@@ -1,0 +1,9 @@
+_target_: src.models.models.FNO
+
+
+num_step: 10
+n_dimension: 1
+modes: 16
+width: 32
+hidden_dim: 32
+activation: leaky_relu

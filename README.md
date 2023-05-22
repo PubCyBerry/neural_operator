@@ -12,7 +12,7 @@
 - Data Generation
 
 ```bash
-python src/create.py
+python src/create.py num_data=1000
 ```
 
 - Training
@@ -32,7 +32,7 @@ python src/train.py --multirun experiment=dnn,pinn,deeponet
 
 ```bash
 # inference using DeepONet
-python src/eval.py model=deeponet ckpt_path=<path/to/ckpt.pth>
+python src/eval.py model_name=DeepONet
 ```
 
 - Coverage
@@ -58,7 +58,7 @@ docker pull pytorch/pytorch:1.13.1-cuda11.6-cudnn8-runtime
 # Update
 apt-get update
 apt-get upgrade -y
-apt-get install wget curl git vim systemd -y
+apt-get install wget curl git vim systemd imagemagick -y
 
 # setup zsh
 apt-get install zsh

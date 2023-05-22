@@ -1,16 +1,24 @@
-from typing import Tuple
-import os
-import os.path as osp
-import pathlib
+from typing import Any, Tuple
+from pathlib import Path
 
+import torch
+
+# Plotting
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import torch
-from matplotlib import animation, gridspec
+from matplotlib import gridspec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from PIL import Image
+from matplotlib import animation
 
+# Set maximum buffer size for animation
 mpl.rcParams["animation.embed_limit"] = 2**128
+
+full_name = {
+    "DNN": "Deep Neural Network",
+    "PINN": "Physics Informed Neural Network",
+    "DeepONet": "Deep Operator Network",
+    "FNO": "Fourier Neural Operator",
+}
 
 
 def plot_solution(
@@ -19,11 +27,13 @@ def plot_solution(
     U: torch.tensor,
     U_pred: torch.tensor = None,
     ps: torch.tensor = None,
-    save_img: bool = True,
+    figsize: Tuple[int, int] = None,
     title: str = None,
+    result_dir: Path = Path("results"),
     filename: str = None,
-    result_dir: str = "results",
-    figsize=None,
+    suffix: str = ".png",
+    *args: Any,
+    **kwds: Any,
 ):
     xs = torch.linspace(*xlim, U.shape[0])
     ts = torch.linspace(*tlim, U.shape[1])
@@ -104,9 +114,7 @@ def plot_solution(
         ax_xlabels = ax_xlabels * ncol
         ax_ylabels = ax_ylabels * ncol
 
-    for col, img, ax_title, ax_xlabel, ax_ylabel in zip(
-        range(ncol), imgs, ax_titles, ax_xlabels, ax_ylabels
-    ):
+    for col, img, ax_title, ax_xlabel, ax_ylabel in zip(range(ncol), imgs, ax_titles, ax_xlabels, ax_ylabels):
         ax = plt.subplot(gs0[0, col])
         ax.set_title(ax_title, fontsize=12)
         ax.set_xlabel(ax_xlabel, fontsize=12)
@@ -144,21 +152,26 @@ def plot_solution(
         ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.35), ncol=5, frameon=False)
 
     if title is not None:
-        fig.suptitle(f"{title.replace('models.','')}", fontsize=18)
+        for key, value in full_name.items():
+            if key in title:
+                title = title.replace(key, value)
+        fig.suptitle(title, fontsize=18)
 
     # save image
-    if save_img and filename is not None:
-        os.makedirs(result_dir, exist_ok=True)
+    if filename is not None:
+        file_path = Path(result_dir) / filename
+        file_path.parent.mkdir(parents=True, exist_ok=True)
 
         # save plot to a memory
         # # [Option 1] use Pillow
+        # from PIL import Image
         # canvas = plt.get_current_fig_manager().canvas
         # canvas.draw()
         # img = Image.frombytes("RGB", canvas.get_width_height(), canvas.tostring_rgb())
         # img.save(fp=osp.join(result_dir, filename.split(".")[-1]) + ".png")
 
         # [Option 2] use matplotlib
-        plt.savefig(osp.join(result_dir, filename.split(".")[-1]) + ".png")
+        plt.savefig(file_path.with_suffix(suffix))
 
     # return img
     return fig
@@ -167,16 +180,18 @@ def plot_solution(
 def animate_solution(
     xlim: Tuple[float, float],
     tlim: Tuple[float, float],
-    ys: torch.tensor,
+    ys: torch.tensor = None,
     y_pred: torch.tensor = None,
+    figsize: Tuple[int, int] = None,
     interval: int = 50,
     fps: int = 60,
-    save_img: bool = True,
+    result_dir: Path = Path("results"),
     filename: str = None,
-    result_dir: str = "results",
-    num_x:int = 256,
-    num_t:int = 128,
-    figsize=None
+    suffix: str = ".gif",
+    num_x: int = 128,
+    num_t: int = 64,
+    *args: Any,
+    **kwds: Any,
 ):
     """
     plot time evolution animation of solution
@@ -203,19 +218,16 @@ def animate_solution(
     ax.set_ylabel(r"$u(x) \ [\mathrm{m}/s]$", fontsize=14)
     ax.grid(which="both", axis="both", linestyle="--")
 
-    ys = ys[::fast_x,::fast_t]
+    ys = ys[::fast_x, ::fast_t]
     if y_pred is not None:
-        y_pred = y_pred[::fast_x,::fast_t]
+        y_pred = y_pred[::fast_x, ::fast_t]
         pred_xs = torch.linspace(*xlim, y_pred.shape[0])
         ax.legend()
 
     def init():
         line.set_data([], [])
         pred.set_data([], [])
-        return (
-            line,
-            pred,
-        )
+        return (line, pred)
 
     # animation function.  This is called sequentially
     def animate(i):
@@ -229,20 +241,18 @@ def animate_solution(
         return (line,)
 
     # call the animator.  blit=True means only re-draw the parts that have changed.
-    anim = animation.FuncAnimation(
-        fig, animate, init_func=init, frames=ys.shape[1], interval=interval, blit=True
-    )
+    anim = animation.FuncAnimation(fig, animate, init_func=init, frames=ys.shape[1], interval=interval, blit=True)
 
     # save image
-    if save_img and filename is not None:
-        os.makedirs(result_dir, exist_ok=True)
-        anim.save(
-            filename=osp.join(result_dir, filename.split(".")[-1]) + ".gif",
-            writer="imagemagick",
-            fps=fps,
-        )
-        # Writer = animation.writers['ffmpeg']
-        # writer = Writer(fps=25, metadata=dict(artist='Me'), bitrate=10000)
-        # anim.save('lines.mp4', writer=writer)
+    if filename is not None:
+        file_path = Path(result_dir) / filename
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        if suffix == ".gif":
+            anim.save(filename=file_path.with_suffix(suffix), writer="imagemagick", fps=fps)
+
+        elif suffix == ".mp4":
+            anim.save(filename=file_path.with_suffix(suffix), writer="ffmpeg", fps=fps)
+        else:
+            raise NotImplementedError
 
     return anim

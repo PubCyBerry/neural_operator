@@ -1,0 +1,18 @@
+# @package _global_
+defaults:
+  - override /model: fno.yaml
+  - override /dataset: fno.yaml
+  - _self_
+
+model:
+  num_step: 32
+  modes: 12
+  hidden_dim: 128
+  activation: leaky_relu
+
+dataset:
+  grid_x: 128
+  num_step: ${model.num_step}
+
+loader:
+  batch_size: 20
