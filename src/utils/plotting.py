@@ -155,7 +155,7 @@ def plot_solution(
         for key, value in full_name.items():
             if key in title:
                 title = title.replace(key, value)
-        fig.suptitle(title, fontsize=18)
+        fig.suptitle(title.replace('best_', '(Best) '), fontsize=18)
 
     # save image
     if filename is not None:

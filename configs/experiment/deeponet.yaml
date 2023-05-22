@@ -6,24 +6,24 @@ defaults:
 
 model:
   # Branch Network
-  branch_dim: 512
+  branch_dim: 1024
   branch_layers: 4
 
   # Trunk Network
   trunk_dim: 2
-  trunk_layers: 4
+  trunk_layers: 6
 
   # activation
-  hidden_dim: 512
-  activation: tanh
+  hidden_dim: 128
+  activation: relu
 
 
 
 dataset:
   num_input_sensors: ${model.branch_dim}
-  num_output_sensors: 2048
+  num_output_sensors: 512
 
 loader:
-  batch_size: 128
+  batch_size: 64
 
-epochs: 100
+epochs: 300
