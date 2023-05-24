@@ -16,13 +16,13 @@
 
 | Full Field                            | Animation                            |
 | ----------------------------------- | ----------------------------------- |
-| ![fig](docs/Result%20-%20best_DeepONet.png) | ![gif](dics/../docs/Result%20-%20best_DeepONet.gif)
+| ![fig](docs/Result_best_DeepONet.png) | ![gif](docs/Result_best_DeepONet.gif)
 
 ### Fourier Neural Operator
 
 | Full Field                            | Animation                            |
 | ----------------------------------- | ----------------------------------- |
-| ![fig](docs/Result%20-%20FNO.png) | ![gif](dics/../docs/Result%20-%20FNO.gif)
+| ![fig](docs/Result_FNO.png) | ![gif](docs/Result_FNO.gif)
 
 ## Usage
 

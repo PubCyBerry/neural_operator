@@ -97,6 +97,7 @@ class BurgersLitModule(LightningModule):
         self.log("val/acc_best", self.val_acc_best.compute(), sync_dist=True, prog_bar=True)
 
     def test_step(self, batch: Any, batch_idx: int):
+        self.net.train()
         loss, preds, targets = self.model_step(batch)
 
         # update and log metrics
