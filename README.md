@@ -14,15 +14,15 @@
 
 ### DeepONet
 
-| Full Field                            | Animation                            |
-| ----------------------------------- | ----------------------------------- |
-| ![fig](docs/Result_best_DeepONet.png) | ![gif](docs/Result_best_DeepONet.gif)
+| Full Field                            | Animation                             |
+| ------------------------------------- | ------------------------------------- |
+| ![fig](docs/Result_best_DeepONet.png) | ![gif](docs/Result_best_DeepONet.gif) |
 
 ### Fourier Neural Operator
 
-| Full Field                            | Animation                            |
-| ----------------------------------- | ----------------------------------- |
-| ![fig](docs/Result_FNO.png) | ![gif](docs/Result_FNO.gif)
+| Full Field                  | Animation                   |
+| --------------------------- | --------------------------- |
+| ![fig](docs/Result_FNO.png) | ![gif](docs/Result_FNO.gif) |
 
 ## Usage
 
@@ -75,7 +75,7 @@ docker pull pytorch/pytorch:1.13.1-cuda11.6-cudnn8-runtime
 # Update
 apt-get update
 apt-get upgrade -y
-apt-get install wget curl git vim systemd imagemagick -y
+apt-get install wget curl git vim systemd imagemagick language-pack-en -y
 
 # setup zsh
 apt-get install zsh
@@ -91,6 +91,8 @@ vim ~/.zshrc
 
 # install requirements
 pip install -r requirements.txt
+# [Optional] install pre-commit Hooks
+pre-commit install
 ```
 
 ## References

@@ -1,4 +1,5 @@
 from typing import Tuple
+
 import pytest
 
 from src.data.create_data import Data_Generator

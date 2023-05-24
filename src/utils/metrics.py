@@ -1,4 +1,5 @@
 from typing import Any, Optional
+
 import torch
 from torchmetrics import Metric
 
@@ -38,9 +39,7 @@ class LpLoss(Metric):
         return self.lploss / self.total
 
     def abs(self, x: torch.tensor, y: torch.tensor):
-        """
-        Absolute Lp Loss
-        """
+        """Absolute Lp Loss."""
         num_examples = x.size()[0]
 
         # Assume uniform mesh
@@ -59,12 +58,12 @@ class LpLoss(Metric):
         return all_norms
 
     def rel(self, x: torch.tensor, y: torch.tensor):
-        """
-        Relative Lp Loss
-        """
+        """Relative Lp Loss."""
         num_examples = x.size()[0]
 
-        diff_norms = torch.norm(x.reshape(num_examples, -1) - y.reshape(num_examples, -1), self.p, 1)
+        diff_norms = torch.norm(
+            x.reshape(num_examples, -1) - y.reshape(num_examples, -1), self.p, 1
+        )
         y_norms = torch.norm(y.reshape(num_examples, -1), self.p, 1)
 
         if self.reduction:
@@ -95,7 +94,7 @@ class HsLoss(Metric):
         self.add_state("hsloss", default=torch.tensor(0), dist_reduce_fx="sum")
         self.add_state("total", default=torch.tensor(0), dist_reduce_fx="sum")
 
-        # Dimension and Lp-norm type are postive
+        # Dimension and Lp-norm type are positive
         assert d > 0 and p > 0
 
         self.d = d
@@ -105,7 +104,7 @@ class HsLoss(Metric):
         self.reduction = reduction
         self.size_average = size_average
 
-        if a == None:
+        if a is None:
             a = [1] * k
         self.a = a
 
@@ -122,7 +121,9 @@ class HsLoss(Metric):
 
     def rel(self, x: torch.tensor, y: torch.tensor):
         num_examples = x.size()[0]
-        diff_norms = torch.norm(x.reshape(num_examples, -1) - y.reshape(num_examples, -1), self.p, 1)
+        diff_norms = torch.norm(
+            x.reshape(num_examples, -1) - y.reshape(num_examples, -1), self.p, 1
+        )
         y_norms = torch.norm(y.reshape(num_examples, -1), self.p, 1)
         if self.reduction:
             if self.size_average:
@@ -141,12 +142,24 @@ class HsLoss(Metric):
         y = y.view(y.shape[0], nx, ny, -1)
 
         k_x = (
-            torch.cat((torch.arange(start=0, end=nx // 2, step=1), torch.arange(start=-nx // 2, end=0, step=1)), 0)
+            torch.cat(
+                (
+                    torch.arange(start=0, end=nx // 2, step=1),
+                    torch.arange(start=-nx // 2, end=0, step=1),
+                ),
+                0,
+            )
             .reshape(nx, 1)
             .repeat(1, ny)
         )
         k_y = (
-            torch.cat((torch.arange(start=0, end=ny // 2, step=1), torch.arange(start=-ny // 2, end=0, step=1)), 0)
+            torch.cat(
+                (
+                    torch.arange(start=0, end=ny // 2, step=1),
+                    torch.arange(start=-ny // 2, end=0, step=1),
+                ),
+                0,
+            )
             .reshape(1, ny)
             .repeat(nx, 1)
         )
@@ -156,7 +169,7 @@ class HsLoss(Metric):
         x = torch.fft.fftn(x, dim=[1, 2])
         y = torch.fft.fftn(y, dim=[1, 2])
 
-        if balanced == False:
+        if balanced is False:
             weight = 1
             if k >= 1:
                 weight += a[0] ** 2 * (k_x**2 + k_y**2)

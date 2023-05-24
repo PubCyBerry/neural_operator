@@ -7,7 +7,9 @@ from torch.utils.data import Dataset
 
 
 class Closure:
-    def __init__(self, model_name: str, dataset: Optional[Dataset], *args: Any, **kwds: Any) -> None:
+    def __init__(
+        self, model_name: str, dataset: Optional[Dataset], *args: Any, **kwds: Any
+    ) -> None:
         """
         model_name: key for closure
         coefficient: property of PDE instance
@@ -16,22 +18,14 @@ class Closure:
         self.coefficient: Optional[torch.tensor] = torch.Tensor(dataset.coefficient)
 
         model_name: str = model_name.lower()
-        if model_name == "dnn":
-            self.closure = self.data_loss
-
-        elif model_name == "pinn":
-            self.grad_kwds = {"create_graph": True, "retain_graph": True}
+        if model_name == "pinn":
             self.pde = self.compute_Burgers
             self.ic_data = dataset.ic_data
             self.bc_data = dataset.bc_data
             self.col_data = dataset.col_data
             self.closure = self.pinn_loss
-
-        elif model_name == "deeponet":
+        else:
             self.closure = self.data_loss
-
-        elif model_name == "fno":
-            self.closure = self.fno_loss
 
     def __call__(self, *args: Any, **kwds: Any) -> Any:
         return self.closure(*args, **kwds)
@@ -43,8 +37,11 @@ class Closure:
         target: torch.tensor,
     ) -> torch.tensor:
         # Data-driven Loss
+        batch_size = len(target)
         preds = model(data)
-        loss = F.mse_loss(preds, target)
+        loss = F.mse_loss(
+            preds.view(batch_size, -1), target.view(batch_size, -1), reduction="mean"
+        )
         return loss, preds
 
     def pinn_loss(
@@ -91,37 +88,24 @@ class Closure:
         loss = F.mse_loss(left_preds, right_preds)
         return loss / (len(left_preds) * len(right_preds))
 
-    def collocation_loss(self, model: torch.nn.Module, data: Tuple[torch.tensor, torch.tensor]) -> torch.tensor:
-        # Set variables differentiable
-        x = data[0].requires_grad_()
-        t = data[1].requires_grad_()
-        u = model((x, t))
-        # Compute residual & loss
-        residual = self.pde(u, x, t)
-        pde_loss = F.mse_loss(residual, torch.zeros_like(residual))
+    def collocation_loss(
+        self, model: torch.nn.Module, data: Tuple[torch.tensor, torch.tensor]
+    ) -> torch.tensor:
+        # Set all variables differentiable
+        with torch.inference_mode(False):
+            x = data[0].requires_grad_()
+            t = data[1].requires_grad_()
+            u = model((x, t))
+            # Compute residual & loss
+            residual = self.pde(u, x, t)
+            pde_loss = F.mse_loss(residual, torch.zeros_like(residual))
         return pde_loss / len(residual)
 
     def compute_Burgers(self, u: torch.Tensor, x: torch.Tensor, t: torch.Tensor) -> torch.tensor:
         # PDE Loss
         # u_t + uu_x = \nu u_xx(\nu = 0.01 in this dataset)
-        u_t = grad(u, t, grad_outputs=torch.ones_like(u), **self.grad_kwds)[0]
-        u_x = grad(u, x, grad_outputs=torch.ones_like(u), **self.grad_kwds)[0]
-        u_xx = grad(u, x, grad_outputs=torch.ones_like(u), **self.grad_kwds)[0]
+        output_shape = torch.ones_like(u)
+        u_t = grad(u, t, grad_outputs=output_shape, create_graph=True)[0]
+        u_x = grad(u, x, grad_outputs=output_shape, create_graph=True)[0]
+        u_xx = grad(u_x, x, grad_outputs=output_shape, create_graph=True)[0]
         return u_t + u * u_x - self.coefficient * u_xx
-
-    def fno_loss(
-        self,
-        model: torch.nn.Module,
-        data: Tuple[torch.tensor, torch.tensor],
-        target: torch.tensor,
-    ) -> torch.tensor:
-        """
-        data: (batch, num_grid, 1), (batch, num_grid, 1)
-        """
-        batch_size = len(target)
-        preds = model(data)
-        # (batch, num_grid, num_t) -> (batch, num_grid * num_t)
-        loss = F.mse_loss(preds.view(batch_size, -1), target.view(batch_size, -1), reduction="mean")
-        return loss, preds
-
-

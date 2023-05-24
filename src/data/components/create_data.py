@@ -1,7 +1,7 @@
 # import libs
 import os
-from pathlib import Path
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional, Tuple
 
 import numpy as np

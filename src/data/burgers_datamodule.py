@@ -1,9 +1,9 @@
 from typing import Any, Dict, Optional, Tuple
-import hydra
-from omegaconf import OmegaConf, DictConfig
 
+import hydra
 import torch
 from lightning import LightningDataModule
+from omegaconf import DictConfig, OmegaConf
 from torch.utils.data import ConcatDataset, DataLoader, Dataset, random_split
 from torchvision.transforms import transforms
 
@@ -47,7 +47,7 @@ class BurgersDataModule(LightningDataModule):
 
         # this line allows to access init params with 'self.hparams' attribute
         # also ensures init params will be stored in ckpt
-        self.save_hyperparameters(logger=False, ignore=['dataset'])
+        self.save_hyperparameters(logger=False, ignore=["dataset"])
 
         # data transformations
         # self.transforms = transforms.Compose(

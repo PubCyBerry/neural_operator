@@ -13,8 +13,7 @@ scheduler:
   factor: 0.1
   patience: 10
 
-
-net: 
+net:
   _target_: src.models.components.models.FNO
   num_step: 10
   n_dimension: 1

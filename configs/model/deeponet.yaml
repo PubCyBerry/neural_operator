@@ -13,8 +13,7 @@ scheduler:
   factor: 0.1
   patience: 10
 
-
-net: 
+net:
   _target_: src.models.components.models.DeepONet
   # Branch Network
   branch_dim: 512
@@ -25,4 +24,3 @@ net:
   # activation
   hidden_dim: 512
   activation: lrelu
-

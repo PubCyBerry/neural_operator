@@ -136,7 +136,9 @@ class FNO(BaseNN):
 
         self.modes1: int = modes
         self.width: int = width
-        self.fc0 = nn.Linear(num_step + n_dimension, self.width)  # input channel is : (a(x,t[ti ~ to]), x)
+        self.fc0 = nn.Linear(
+            num_step + n_dimension, self.width
+        )  # input channel is : (a(x,t[ti ~ to]), x)
 
         self.conv0 = SpectralConv1d(self.width, self.width, self.modes1)
         self.conv1 = SpectralConv1d(self.width, self.width, self.modes1)

@@ -8,7 +8,7 @@ lightning>=1.9.1
 DeepXDE==1.8.4
 
 # ----------- JAX -----------#
---pre 
+--pre
 --find-links https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 jax[cuda]
 

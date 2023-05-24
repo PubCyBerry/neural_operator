@@ -7,7 +7,7 @@ defaults:
 
 seed: 41
 
-model_name: null 
+model_name: null
 ckpt_dir: ${paths.model_dir}
 
 plot:

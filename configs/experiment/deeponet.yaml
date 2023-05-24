@@ -46,5 +46,3 @@ data:
   dataset:
     num_input_sensors: ${model.net.branch_dim}
     num_output_sensors: 512
-
-

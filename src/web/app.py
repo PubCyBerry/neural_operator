@@ -1,35 +1,55 @@
 # Type hint
+import gc
 from typing import Any, Optional, Tuple
-
-# webapp
-import streamlit as st
-from streamlit import session_state as sess
-from streamlit.components import v1 as components
-
-# from streamlit_extras import switch_page_button
 
 # ML backend
 import numpy as np
-import torch
-import gc
 
+# webapp
+import streamlit as st
+import torch
+from streamlit import session_state as sess
+from streamlit.components import v1 as components
+
+from src.data.create_data import Data_Generator
 
 # user-defined libs
 from src.utils import plotting
 from src.utils.utils import load_model, make_mesh
-from src.data.create_data import Data_Generator
+
+# from streamlit_extras import switch_page_button
 
 
-############ CONTENTS ###############
+# CONTENTS
+
+
 @st.cache_data
-def web_figure(tag:str, target_func: str, _xs:torch.tensor, _ts:torch.tensor, _ys:torch.tensor, _preds:torch.tensor=None, *args: Any, **kwds: Any):
+def web_figure(
+    tag: str,
+    target_func: str,
+    _xs: torch.tensor,
+    _ts: torch.tensor,
+    _ys: torch.tensor,
+    _preds: torch.tensor = None,
+    *args: Any,
+    **kwds: Any,
+):
     fig_tag = tag
     fig = getattr(plotting, target_func)(_xs, _ts, _ys, _preds, *args, **kwds)
     st.pyplot(fig)
 
 
 @st.cache_data
-def web_animation(tag:str, target_func: str, _xs:torch.tensor, _ts:torch.tensor, _ys:torch.tensor, _preds:torch.tensor=None, *args: Any, **kwds: Any):
+def web_animation(
+    tag: str,
+    target_func: str,
+    _xs: torch.tensor,
+    _ts: torch.tensor,
+    _ys: torch.tensor,
+    _preds: torch.tensor = None,
+    *args: Any,
+    **kwds: Any,
+):
     anim_tag = tag
     anim = getattr(plotting, target_func)(_xs, _ts, _ys, _preds, *args, **kwds)
     components.html(anim.to_jshtml(), width=800, height=550, scrolling=False)
@@ -55,7 +75,10 @@ def model_page(model_name: str):
             elif model_name == "FNO":
                 u = sess.data[:, :1].unsqueeze(0)
                 preds = (
-                    model.repeat((u.cuda(), torch.linspace(*sess.xlim, u.shape[1]).view(1, -1, 1).cuda()), Nt)
+                    model.repeat(
+                        (u.cuda(), torch.linspace(*sess.xlim, u.shape[1]).view(1, -1, 1).cuda()),
+                        Nt,
+                    )
                     .view(Nx, Nt)
                     .detach()
                     .cpu()
@@ -65,9 +88,19 @@ def model_page(model_name: str):
 
             # Plot result
             with st.spinner("Drawing Full Field..."):
-                web_figure(f'{model_name}_Fig',"plot_solution", sess.xlim, sess.tlim, sess.data, preds)
+                web_figure(
+                    f"{model_name}_Fig", "plot_solution", sess.xlim, sess.tlim, sess.data, preds
+                )
             with st.spinner("Animating Solution..."):
-                web_animation(f'{model_name}_Anim',"animate_solution", sess.xlim, sess.tlim, sess.data, preds, save_img=False)
+                web_animation(
+                    f"{model_name}_Anim",
+                    "animate_solution",
+                    sess.xlim,
+                    sess.tlim,
+                    sess.data,
+                    preds,
+                    save_img=False,
+                )
         # del sess[f"Nx_{model_name}"], sess[f"Nt_{model_name}"], sess[f"button_{model_name}"]
 
 
@@ -79,7 +112,6 @@ def main():
     app_title: str = "PDE with Deep Learning"
     st.set_page_config(page_title=app_title, page_icon=":hourglass:")
     st.title(app_title)
-
 
     top_container = st.container()
     top1, top2, top3 = top_container.columns([1, 1, 1])
@@ -121,7 +153,7 @@ def main():
             coefficient=coefficient,
             data_dir="data",
             backend="torch",
-            device=torch.device('cpu')
+            device=torch.device("cpu"),
         )
 
     with st.expander("Initial Condition Configuration"):
@@ -134,14 +166,19 @@ def main():
             gamma: float = st.number_input("γ : regularity of random field", 2.5)
             is_parallel: bool = False
             current_variance = (
-                f"$C={int(sigma)}" + r"\left(-\dfrac{d^2}{dx^2}" + rf"+{int(tau)}I \right)" + "^{" + f"{-gamma}" + "}$"
+                f"$C={int(sigma)}"
+                + r"\left(-\dfrac{d^2}{dx^2}"
+                + rf"+{int(tau)}I \right)"
+                + "^{"
+                + f"{-gamma}"
+                + "}$"
             )
 
         with col2:
             st.markdown("#### Gaussian Random Field(GRF)")
             st.markdown(r"Probability measure $\mu\sim\mathcal{N}(m,C)$")
             st.markdown(r"where $C=\sigma^2(-\Delta + \tau^2 I)^{-\gamma}$")
-            st.markdown(r"Choose initial condtion $u(x,0)=u_0 \sim \mu$")
+            st.markdown(r"Choose initial condition $u(x,0)=u_0 \sim \mu$")
             st.markdown(r"##### Current setting")
             st.markdown(current_variance)
 
@@ -166,15 +203,21 @@ def main():
     if top3.button("Plot Solution", use_container_width=True) and "data" in sess:
         with st.expander("Solution", expanded=True):
             with st.spinner("Drawing Full Field..."):
-                web_figure('Solution_Fig',"plot_solution", sess.xlim, sess.tlim, sess.data)
+                web_figure("Solution_Fig", "plot_solution", sess.xlim, sess.tlim, sess.data)
             with st.spinner("Animating Solution..."):
-                web_animation('Solution_Anim',"animate_solution", sess.xlim, sess.tlim, sess.data, save_img=False)
+                web_animation(
+                    "Solution_Anim",
+                    "animate_solution",
+                    sess.xlim,
+                    sess.tlim,
+                    sess.data,
+                    save_img=False,
+                )
 
     model_page("DNN")
     model_page("PINN")
     model_page("DeepONet")
     model_page("FNO")
-
 
 
 if __name__ == "__main__":

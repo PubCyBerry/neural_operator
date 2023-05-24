@@ -39,5 +39,3 @@ data:
   dataset:
     grid_x: 128
     num_step: ${model.net.num_step}
-
-

@@ -8,8 +8,6 @@ defaults:
 # task name, determines output directory path
 task_name: create
 
-
-
 # name of data file
 num_data: 1000 # number of data to create
-filename: ${now:%Y-%m-%d}_${now:%H-%M-%S}/${generator.target_pde}_${generator.Nx}_${generator.Nt} 
+filename: ${now:%Y-%m-%d}_${now:%H-%M-%S}/${generator.target_pde}_${generator.Nx}_${generator.Nt}

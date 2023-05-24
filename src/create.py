@@ -1,10 +1,12 @@
 import hydra
-import torch
-from omegaconf import DictConfig
 
 # set pythonpath
 import pyrootutils
+import torch
+from omegaconf import DictConfig
+
 pyrootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
+
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="create.yaml")
 def main(cfg: DictConfig) -> None:

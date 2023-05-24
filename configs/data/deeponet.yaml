@@ -4,10 +4,9 @@ train_val_test_split: [0.7, 0.2, 0.1]
 num_workers: 0
 pin_memory: False
 
-dataset: 
+dataset:
   _target_: src.data.components.datasets.DeepONetDataset
   data_dir: ${paths.data_dir}
   filename: ${filename}
   num_input_sensors: ${model.branch_dim}
   num_output_sensors: 1024
-

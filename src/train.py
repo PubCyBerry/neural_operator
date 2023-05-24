@@ -1,170 +1,147 @@
-import os
-import os.path as osp
-from typing import Any, Optional, Tuple
+import shutil
+from pathlib import Path
+from typing import List, Optional, Tuple
 
 import hydra
-import torch
-from omegaconf import DictConfig
-from torch.utils.data import DataLoader, Dataset, random_split
-from torch.utils.tensorboard import SummaryWriter
-
-# user-defined libs
-from src.utils.closures import Closure
-from src.utils.utils import set_progress_bar, set_seed
-from src.utils.checkpointing import save_checkpoint
-
-# set pythonpath
+import lightning
 import pyrootutils
+import torch
+from lightning import Callback, LightningDataModule, LightningModule, Trainer
+from lightning.pytorch.loggers import Logger
+from omegaconf import DictConfig
+
 pyrootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
+# ------------------------------------------------------------------------------------ #
+# the setup_root above is equivalent to:
+# - adding project root dir to PYTHONPATH
+#       (so you don't need to force user to install project as a package)
+#       (necessary before importing any local modules e.g. `from src import utils`)
+# - setting up PROJECT_ROOT environment variable
+#       (which is used as a base for paths in "configs/paths/default.yaml")
+#       (this way all filepaths are the same no matter where you run the code)
+# - loading environment variables from ".env" in root dir
+#
+# you can remove it if you:
+# 1. either install project as a package or move entry files to project root dir
+# 2. set `root_dir` to "." in "configs/paths/default.yaml"
+#
+# more info: https://github.com/ashleve/pyrootutils
+# ------------------------------------------------------------------------------------ #
 
-def train(
-    model: torch.nn.Module,
-    loader: DataLoader,
-    optimizer: torch.optim.Optimizer,
-    writer: SummaryWriter,
-    epoch: int,
-    device: torch.device,
-    closure: callable,
-    progress_bar: Any,
-    task: Any,
-):
+from src import utils
+from src.utils.closures import Closure
+
+log = utils.get_pylogger(__name__)
+
+
+@utils.task_wrapper
+def train(cfg: DictConfig) -> Tuple[dict, dict]:
+    """Trains the model. Can additionally evaluate on a testset, using best weights obtained during
+    training.
+
+    This method is wrapped in optional @task_wrapper decorator, that controls the behavior during
+    failure. Useful for multiruns, saving info about the crash, etc.
+
+    Args:
+        cfg (DictConfig): Configuration composed by Hydra.
+
+    Returns:
+        Tuple[dict, dict]: Dict with metrics and dict with all instantiated objects.
     """
-    model: model to train
-    loader: dataloader for training
-    optimizer: optimizer for training
-    writer: logger (Tensorborad / WandB / ...)
-    epoch: current epoch
-    device: device to run (cpu/gpu)
-    closure: Loss function corresponding to each model
-    progress_bar: progress bar counter
-    task: label text for progress bar
-    """
-    # loss calculation reference:
-    # https://github.com/pytorch/examples/blob/1de2ff9338bacaaffa123d03ce53d7522d5dcc2e/imagenet/main.py#L287
-    model.train()
-    train_loss = 0
-    for batch_idx, (data, target) in enumerate(loader):
-        optimizer.zero_grad()
-        loss = closure(model, data, target, device)
-        loss.backward()
-        optimizer.step()
 
-        train_loss += loss.item() * len(data)
-        progress_bar.update(task, advance=1, description=f"[green]Train Loss: {loss.item():.4e}")
+    # set seed for random number generators in pytorch, numpy and python.random
+    if cfg.get("seed"):
+        lightning.seed_everything(cfg.seed, workers=True)
 
-    train_loss /= len(loader.dataset)
-    # log metrics
-    writer.add_scalar("Loss/train", train_loss, epoch)
+    log.info(f"Instantiating datamodule <{cfg.data._target_}>")
+    datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)
 
+    log.info(f"Instantiating model <{cfg.model._target_}>")
+    model: LightningModule = hydra.utils.instantiate(cfg.model)
 
-def test(
-    model: torch.nn.Module,
-    loader: DataLoader,
-    writer: SummaryWriter,
-    epoch: int,
-    device: torch.device,
-    closure: callable,
-    progress_bar: Any,
-    task: Any,
-):
-    """
-    model: model to test
-    loader: dataloader for testing
-    writer: logger (Tensorborad / WandB / ...)
-    epoch: current epoch
-    device: device to run (cpu/gpu)
-    closure: Loss function corresponding to each model
-    progress_bar: progress bar counter
-    task: label text for progress bar
-    """
-    # loss calculation reference:
-    # https://github.com/pytorch/examples/blob/1de2ff9338bacaaffa123d03ce53d7522d5dcc2e/imagenet/main.py#L287
-    model.eval()
-    test_loss = 0
-    for batch_idx, (data, target) in enumerate(loader):
-        loss = closure(model, data, target, device)
-        test_loss += loss.item() * len(data)
+    log.info(f"Adding closure to model <{cfg.model._target_}>")
+    setattr(
+        model,
+        "closure",
+        Closure(model_name=model.net.__class__.__name__, dataset=datamodule.dataset),
+    )
 
-        progress_bar.update(task, advance=1, description=f"[purple]Test Loss: {loss.item():.4e}")
-    test_loss /= len(loader.dataset)
-    metric = test_loss
+    log.info("Instantiating callbacks...")
+    callbacks: List[Callback] = utils.instantiate_callbacks(cfg.get("callbacks"))
 
-    # log metrics
-    writer.add_scalar("Loss/test", test_loss, epoch)
-    return metric
+    log.info("Instantiating loggers...")
+    logger: List[Logger] = utils.instantiate_loggers(cfg.get("logger"))
+
+    log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
+    trainer: Trainer = hydra.utils.instantiate(cfg.trainer, callbacks=callbacks, logger=logger)
+
+    object_dict = {
+        "cfg": cfg,
+        "datamodule": datamodule,
+        "model": model,
+        "callbacks": callbacks,
+        "logger": logger,
+        "trainer": trainer,
+    }
+
+    if logger:
+        log.info("Logging hyperparameters!")
+        utils.log_hyperparameters(object_dict)
+
+    if cfg.get("compile"):
+        log.info("Compiling model!")
+        model = torch.compile(model)
+
+    if cfg.get("train"):
+        log.info("Starting training!")
+        trainer.fit(model=model, datamodule=datamodule, ckpt_path=cfg.get("ckpt_path"))
+
+    log.info("Saving trained models...")
+    model_dir: Path = Path(cfg.paths.model_dir)
+    model_name: str = model.net.__class__.__name__
+    checkpoints: List[Path] = list((Path(cfg.paths.output_dir) / "checkpoints").glob("*.ckpt"))
+    for checkpoint in checkpoints:
+        if checkpoint.stem.startswith("last"):
+            filename = f"last_{model_name}.ckpt"
+        else:
+            filename = f"best_{model_name}.ckpt"
+        shutil.copyfile(checkpoint, f"{str(model_dir)}/{filename}")
+
+    train_metrics = trainer.callback_metrics
+
+    if cfg.get("test"):
+        log.info("Starting testing!")
+        ckpt_path = trainer.checkpoint_callback.best_model_path
+        if ckpt_path == "":
+            log.warning("Best ckpt not found! Using current weights for testing...")
+            ckpt_path = None
+        trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
+        log.info(f"Best ckpt path: {ckpt_path}")
+
+    test_metrics = trainer.callback_metrics
+
+    # merge train and test metrics
+    metric_dict = {**train_metrics, **test_metrics}
+
+    return metric_dict, object_dict
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="train.yaml")
 def main(cfg: DictConfig) -> Optional[float]:
-    # set seed for reproducibility
-    set_seed(cfg.seed)
+    # apply extra utilities
+    # (e.g. ask for tags if none are provided in cfg, print cfg tree, etc.)
+    utils.extras(cfg)
 
-    # set train parameters
-    train_test_split: Tuple[float, float] = (0.8, 0.2)
-    best_metric: float = 1e10  # [Choice] Current metric : <Test Loss>
+    # train the model
+    metric_dict, _ = train(cfg)
 
-    device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    writer = SummaryWriter(
-        osp.join(cfg.paths.output_dir, "tensorboard"), comment=cfg.get("comment", "")
+    # safely retrieve metric value for hydra-based hyperparameter optimization
+    metric_value = utils.get_metric_value(
+        metric_dict=metric_dict, metric_name=cfg.get("optimized_metric")
     )
 
-    model: torch.nn.Module = hydra.utils.instantiate(cfg.model).to(device)
-    optimizer: torch.optim.Optimizer = hydra.utils.instantiate(
-        cfg.optimizer, params=model.parameters()
-    )
-    scheduler: torch.optim.lr_scheduler = hydra.utils.instantiate(
-        cfg.scheduler, optimizer=optimizer
-    )
-
-    # create checkpoint_dir
-    checkpoint_dir: str = osp.join(cfg.paths.output_dir, "checkpoints")
-    os.makedirs(checkpoint_dir, exist_ok=True)
-
-    dataset: Dataset = hydra.utils.instantiate(cfg.dataset)
-    closure: callable = Closure(model_name=model.__class__.__name__, dataset=dataset)
-    train_dataset, test_dataset = random_split(
-        dataset=dataset,
-        lengths=train_test_split,
-        generator=torch.Generator().manual_seed(42),
-    )
-
-    train_loader = hydra.utils.instantiate(cfg.loader, dataset=train_dataset, shuffle=True)
-    test_loader = hydra.utils.instantiate(cfg.loader, dataset=test_dataset, shuffle=False)
-
-    with set_progress_bar() as p:
-        main_task = p.add_task("Main Loop", total=cfg.epochs)
-        train_task = p.add_task("Train Loop", total=len(train_loader))
-        test_task = p.add_task("Test Loop", total=len(test_loader))
-        for e in range(cfg.epochs):
-            # train model
-            train(model, train_loader, optimizer, writer, e, device, closure, p, train_task)
-            if (e + 1) < cfg.epochs:
-                p.reset(train_task)
-
-            # validate model
-            metric = test(model, test_loader, writer, e, device, closure, p, test_task)
-            if (e + 1) < cfg.epochs:
-                p.reset(test_task)
-
-            # update learning rate
-            scheduler.step()
-            # check improvements
-            is_best = metric < best_metric
-            best_metric = min(metric, best_metric)
-            # save last & best model
-            save_checkpoint(
-                e + 1,
-                model,
-                best_metric,
-                optimizer,
-                is_best,
-                checkpoint_dir,
-                f"{model.__class__.__name__}.pth",
-                cfg.paths.model_dir,
-                cfg.model,
-            )
-            p.update(main_task, advance=1, description=f"[yellow]Best Metric: {best_metric:.4e}")
-    return best_metric
+    # return optimized metric
+    return metric_value
 
 
 if __name__ == "__main__":

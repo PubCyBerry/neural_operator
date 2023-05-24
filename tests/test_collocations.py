@@ -6,7 +6,7 @@ from src.data.collocations import BC, IC, Collocator
 
 @pytest.mark.parametrize("num_data", [100])
 def test_collocations(num_data: int):
-    device:torch.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     Nx: int = 512
     Nt: int = 512
 

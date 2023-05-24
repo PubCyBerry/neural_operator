@@ -1,7 +1,7 @@
 import pytest
 from torch.utils.data import DataLoader, Dataset
 
-from src.data.datasets import DeepONetDataset, DNNDataset, PINNDataset, FNODataset
+from src.data.datasets import DeepONetDataset, DNNDataset, FNODataset, PINNDataset
 
 
 @pytest.mark.parametrize("batch_size", [32])

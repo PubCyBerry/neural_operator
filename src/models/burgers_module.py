@@ -2,8 +2,9 @@ from typing import Any
 
 import torch
 from lightning import LightningModule
-from src.utils.metrics import LpLoss, HsLoss
-from torchmetrics import MinMetric, MaxMetric, MeanMetric
+from torchmetrics import MaxMetric, MeanMetric, MinMetric
+
+from src.utils.metrics import HsLoss, LpLoss
 
 # from torchmetrics.classification.accuracy import Accuracy
 
@@ -97,7 +98,6 @@ class BurgersLitModule(LightningModule):
         self.log("val/acc_best", self.val_acc_best.compute(), sync_dist=True, prog_bar=True)
 
     def test_step(self, batch: Any, batch_idx: int):
-        self.net.train()
         loss, preds, targets = self.model_step(batch)
 
         # update and log metrics
@@ -131,21 +131,15 @@ class BurgersLitModule(LightningModule):
         return {"optimizer": optimizer}
 
     def on_validation_model_eval(self, *args, **kwargs):
-        '''
-        Enable Differentiation on validation 
-        '''
+        """Enable Differentiation on validation."""
         super().on_validation_model_eval(*args, **kwargs)
         torch.set_grad_enabled(True)
 
-
     def on_test_model_eval(self, *args, **kwargs):
-        '''
-        Enable Differentiation on test
-        '''
+        """Enable Differentiation on test."""
         super().on_test_model_eval(*args, **kwargs)
         torch.set_grad_enabled(True)
-        self.net.train()
-        print(self.net.requires_grad_)
+
 
 if __name__ == "__main__":
     _ = BurgersLitModule(None, None, None)

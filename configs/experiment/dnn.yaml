@@ -40,5 +40,3 @@ data:
   dataset:
     idx: 0 # index of instance to train
     num_data: 10000 # number of data to use
-
-

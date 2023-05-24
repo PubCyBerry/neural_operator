@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from src.data.components.collocations import IC, BC, Collocator
+from src.data.components.collocations import BC, IC, Collocator
 from src.data.components.utils import make_mesh
 
 
@@ -23,7 +23,7 @@ class BaseDataset(Dataset):
 
         data = np.load(data_path)
         # device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        device: torch.device = torch.device('cpu')
+        device: torch.device = torch.device("cpu")
         self.xs: torch.tensor = torch.Tensor(data["xs"]).to(device)  # (Nx,)
         self.ts: torch.tensor = torch.Tensor(data["ts"]).to(device)  # (Nt,)
         self.ys: torch.tensor = torch.Tensor(data["ys"]).to(device)  # (num_data, Nx, Nt)

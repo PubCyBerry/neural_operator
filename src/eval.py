@@ -1,22 +1,25 @@
 from typing import List, Tuple
-import hydra
-from omegaconf import DictConfig
-import torch
-from lightning import LightningDataModule, LightningModule, Trainer
-from lightning.pytorch.loggers import Logger
 
-# user-defined libs
-from src.data.components.utils import make_mesh
-from src.utils.plotting import animate_solution, plot_solution
-from src.utils.checkpointing import load_checkpoint
-from src import utils
+import hydra
 
 # set pythonpath
 import pyrootutils
+import torch
+from lightning import LightningDataModule, LightningModule, Trainer
+from lightning.pytorch.loggers import Logger
+from omegaconf import DictConfig
+
+from src import utils
+
+# user-defined libs
+from src.data.components.utils import make_mesh
+from src.utils.checkpointing import load_checkpoint
+from src.utils.plotting import animate_solution, plot_solution
 
 pyrootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 
 log = utils.get_pylogger(__name__)
+
 
 @utils.task_wrapper
 def evaluate(cfg: DictConfig) -> Tuple[dict, dict]:
@@ -68,6 +71,7 @@ def evaluate(cfg: DictConfig) -> Tuple[dict, dict]:
 
     return metric_dict, object_dict
 
+
 @hydra.main(version_base="1.3", config_path="../configs", config_name="eval.yaml")
 def main(cfg: DictConfig) -> None:
     # apply extra utilities
@@ -75,6 +79,7 @@ def main(cfg: DictConfig) -> None:
     utils.extras(cfg)
 
     evaluate(cfg)
+
 
 if __name__ == "__main__":
     main()

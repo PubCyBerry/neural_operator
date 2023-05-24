@@ -1,14 +1,12 @@
-from typing import Any, Tuple
 from pathlib import Path
-
-import torch
+from typing import Any, Tuple
 
 # Plotting
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib import gridspec
+import torch
+from matplotlib import animation, gridspec
 from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib import animation
 
 # Set maximum buffer size for animation
 mpl.rcParams["animation.embed_limit"] = 2**128
@@ -114,7 +112,9 @@ def plot_solution(
         ax_xlabels = ax_xlabels * ncol
         ax_ylabels = ax_ylabels * ncol
 
-    for col, img, ax_title, ax_xlabel, ax_ylabel in zip(range(ncol), imgs, ax_titles, ax_xlabels, ax_ylabels):
+    for col, img, ax_title, ax_xlabel, ax_ylabel in zip(
+        range(ncol), imgs, ax_titles, ax_xlabels, ax_ylabels
+    ):
         ax = plt.subplot(gs0[0, col])
         ax.set_title(ax_title, fontsize=12)
         ax.set_xlabel(ax_xlabel, fontsize=12)
@@ -136,7 +136,13 @@ def plot_solution(
         ax = plt.subplot(gs1[0, col])
         ax.plot(xs, U[:, idx], "b-", linewidth=2, label="Exact")
         if U_pred is not None:
-            ax.plot(torch.linspace(*xlim, U_pred.shape[0]), U_pred[:, idx], "r--", linewidth=2, label="Prediction")
+            ax.plot(
+                torch.linspace(*xlim, U_pred.shape[0]),
+                U_pred[:, idx],
+                "r--",
+                linewidth=2,
+                label="Prediction",
+            )
         ax.set_xlabel("$x$")
         if col == 0:
             ax.set_ylabel("$u(t,x)$")
@@ -155,7 +161,7 @@ def plot_solution(
         for key, value in full_name.items():
             if key in title:
                 title = title.replace(key, value)
-        fig.suptitle(title.replace('best_', '(Best) '), fontsize=18)
+        fig.suptitle(title.replace("best_", "(Best) "), fontsize=18)
 
     # save image
     if filename is not None:
@@ -241,7 +247,9 @@ def animate_solution(
         return (line,)
 
     # call the animator.  blit=True means only re-draw the parts that have changed.
-    anim = animation.FuncAnimation(fig, animate, init_func=init, frames=ys.shape[1], interval=interval, blit=True)
+    anim = animation.FuncAnimation(
+        fig, animate, init_func=init, frames=ys.shape[1], interval=interval, blit=True
+    )
 
     # save image
     if filename is not None:
