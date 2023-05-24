@@ -1,18 +1,43 @@
 # @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
 defaults:
+  - override /data: fno.yaml
   - override /model: fno.yaml
-  - override /dataset: fno.yaml
-  - _self_
+  - override /callbacks: default.yaml
+  - override /trainer: default.yaml
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: ["Burgers", "FNO"]
+
+seed: 41
+
+trainer:
+  min_epochs: 10
+  max_epochs: 10
+  gradient_clip_val: 0.5
+  accelerator: gpu
+  devices: 1
+  log_every_n_steps: 1
 
 model:
-  num_step: 32
-  modes: 12
-  hidden_dim: 128
-  activation: leaky_relu
+  optimizer:
+    lr: 0.001
+  net:
+    num_step: 32
+    modes: 12
+    hidden_dim: 128
+    activation: lrelu
 
-dataset:
-  grid_x: 128
-  num_step: ${model.num_step}
-
-loader:
+data:
   batch_size: 20
+  num_workers: 6
+  dataset:
+    grid_x: 128
+    num_step: ${model.net.num_step}
+
+

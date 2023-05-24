@@ -1,13 +1,28 @@
-_target_: src.models.models.DeepONet
+_target_: src.models.burgers_module.BurgersLitModule
 
-# Branch Network
-branch_dim: 512
-branch_layers: 2
+optimizer:
+  _target_: torch.optim.Adam
+  _partial_: true
+  lr: 0.001
+  weight_decay: 0.0
 
-# Trunk Network
-trunk_dim: 2
-trunk_layers: 4
+scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _partial_: true
+  mode: min
+  factor: 0.1
+  patience: 10
 
-# activation
-hidden_dim: 512
-activation: lrelu
+
+net: 
+  _target_: src.models.components.models.DeepONet
+  # Branch Network
+  branch_dim: 512
+  branch_layers: 2
+  # Trunk Network
+  trunk_dim: 2
+  trunk_layers: 4
+  # activation
+  hidden_dim: 512
+  activation: lrelu
+

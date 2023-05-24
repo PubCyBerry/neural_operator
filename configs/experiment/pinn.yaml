@@ -1,20 +1,47 @@
 # @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
 defaults:
-  - override /dataset: pinn.yaml
+  - override /data: pinn.yaml
   - override /model: pinn.yaml
-  - _self_
+  - override /callbacks: default.yaml
+  - override /trainer: default.yaml
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: ["Burgers", "PINN"]
+
+seed: 41
+
+trainer:
+  min_epochs: 100
+  max_epochs: 100
+  gradient_clip_val: 0.5
+  accelerator: gpu
+  devices: 1
+  log_every_n_steps: 1
+
 model:
-  input_dim: 2
-  hidden_dim: 20
-  output_dim: 1
-  n_layers: 10
-  activation: lrelu
+  optimizer:
+    lr: 0.001
+  net:
+    input_dim: 2
+    hidden_dim: 20
+    output_dim: 1
+    n_layers: 8
+    activation: lrelu
 
-dataset:
-  idx: 0
-  num_data: 1000
-  Nu: 500000
-  Ni: 1024
-  Nb: 512
+data:
+  batch_size: 64
+  num_workers: 6
+  dataset:
+    idx: 0
+    num_data: 1000
+    Nu: 500000
+    Ni: 1024
+    Nb: 512
 
-epochs: 100
+

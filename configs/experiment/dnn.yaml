@@ -1,17 +1,44 @@
 # @package _global_
-defaults:
-  - override /dataset: dnn.yaml
-  - override /model: dnn.yaml
-  - _self_
 
+# to execute this experiment run:
+# python train.py experiment=example
+
+defaults:
+  - override /data: dnn.yaml
+  - override /model: dnn.yaml
+  - override /callbacks: default.yaml
+  - override /trainer: default.yaml
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: ["Burgers", "DNN"]
+
+seed: 41
+
+trainer:
+  min_epochs: 10
+  max_epochs: 10
+  gradient_clip_val: 0.5
+  accelerator: gpu
+  devices: 1
+  log_every_n_steps: 1
 
 model:
-  input_dim: 2
-  hidden_dim: 20
-  output_dim: 1
-  n_layers: 8
-  activation: lrelu
+  optimizer:
+    lr: 0.001
+  net:
+    input_dim: 2
+    hidden_dim: 20
+    output_dim: 1
+    n_layers: 8
+    activation: lrelu
 
-dataset:
-  idx: 0
-  num_data: 100000
+data:
+  batch_size: 64
+  num_workers: 6
+  dataset:
+    idx: 0 # index of instance to train
+    num_data: 10000 # number of data to use
+
+

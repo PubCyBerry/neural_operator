@@ -1,7 +1,0 @@
-_target_: src.data.datasets.DeepONetDataset
-
-data_dir: ${paths.data_dir}
-filename: ${filename}
-
-num_input_sensors: ${model.branch_dim}
-num_output_sensors: 1024

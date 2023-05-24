@@ -1,0 +1,12 @@
+_target_: src.data.burgers_datamodule.BurgersDataModule
+batch_size: 64
+train_val_test_split: [0.7, 0.2, 0.1]
+num_workers: 0
+pin_memory: False
+
+dataset: 
+  _target_: src.data.components.datasets.FNODataset
+  data_dir: ${paths.data_dir}
+  filename: ${filename}
+  grid_x: 128
+  num_step: ${model.num_step}

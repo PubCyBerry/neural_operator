@@ -1,29 +1,50 @@
 # @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=example
+
 defaults:
+  - override /data: deeponet.yaml
   - override /model: deeponet.yaml
-  - override /dataset: deeponet.yaml
-  - _self_
+  - override /callbacks: default.yaml
+  - override /trainer: default.yaml
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+tags: ["Burgers", "DeepONet"]
+
+seed: 41
+
+trainer:
+  min_epochs: 300
+  max_epochs: 300
+  gradient_clip_val: 0.5
+  accelerator: gpu
+  devices: 1
+  log_every_n_steps: 1
 
 model:
-  # Branch Network
-  branch_dim: 1024
-  branch_layers: 4
+  optimizer:
+    lr: 0.001
+  net:
+    # Branch Network
+    branch_dim: 1024
+    branch_layers: 4
 
-  # Trunk Network
-  trunk_dim: 2
-  trunk_layers: 6
+    # Trunk Network
+    trunk_dim: 2
+    trunk_layers: 6
 
-  # activation
-  hidden_dim: 128
-  activation: relu
+    # activation
+    hidden_dim: 128
+    activation: relu
 
-
-
-dataset:
-  num_input_sensors: ${model.branch_dim}
-  num_output_sensors: 512
-
-loader:
+data:
   batch_size: 64
+  num_workers: 6
+  dataset:
+    num_input_sensors: ${model.net.branch_dim}
+    num_output_sensors: 512
 
-epochs: 300
+

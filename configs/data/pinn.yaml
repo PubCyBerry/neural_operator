@@ -1,0 +1,15 @@
+_target_: src.data.burgers_datamodule.BurgersDataModule
+batch_size: 64
+train_val_test_split: [0.7, 0.2, 0.1]
+num_workers: 0
+pin_memory: False
+
+dataset: 
+  _target_: src.data.components.datasets.PINNDataset
+  data_dir: ${paths.data_dir}
+  filename: ${filename}
+  idx: 0 # index of instance to train
+  num_data: 1000 # number of data to use
+  Nu: 100000 # number of collocation data
+  Ni: 512 # number of initial data
+  Nb: 512 # number of boundary data
