@@ -13,13 +13,13 @@ is_training: False
 
 plot:
   title: Result - ${model_name}
-  filename: Result - ${model_name}
+  filename: Result_${model_name}
   result_dir: ${paths.output_dir}
 
 animate:
   interval: 50
   fps: 60
-  filename: Result - ${model_name}
+  filename: Result_${model_name}
   result_dir: ${paths.output_dir}
   num_x: 256
   num_t: 128
