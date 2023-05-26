@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from src.data.collocations import BC, IC, Collocator
+from src.data.components.collocations import BC, IC, Collocator
 
 
 @pytest.mark.parametrize("num_data", [100])

@@ -8,7 +8,7 @@ import pyrootutils
 import torch
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 pyrootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 # ------------------------------------------------------------------------------------ #
@@ -101,11 +101,11 @@ def train(cfg: DictConfig) -> Tuple[dict, dict]:
     model_name: str = model.net.__class__.__name__
     checkpoints: List[Path] = list((Path(cfg.paths.output_dir) / "checkpoints").glob("*.ckpt"))
     for checkpoint in checkpoints:
-        if checkpoint.stem.startswith("last"):
-            filename = f"last_{model_name}.ckpt"
-        else:
-            filename = f"best_{model_name}.ckpt"
-        shutil.copyfile(checkpoint, f"{str(model_dir)}/{filename}")
+        filename_suffix = "last" if checkpoint.stem.startswith("last") else "best"
+        filename = f"{model_name}_{filename_suffix}"
+        model_path = (model_dir / filename).with_suffix(".ckpt")
+        shutil.copyfile(checkpoint, model_path)
+    OmegaConf.save(cfg.model, (model_dir / model_name).with_suffix(".yaml"))
 
     train_metrics = trainer.callback_metrics
 

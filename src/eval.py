@@ -1,84 +1,77 @@
-from typing import List, Tuple
+# Type Hinting
+from typing import Tuple
 
+# Config
 import hydra
 
 # set pythonpath
 import pyrootutils
+
+# PyTorch
 import torch
-from lightning import LightningDataModule, LightningModule, Trainer
-from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
 
-from src import utils
-
 # user-defined libs
-from src.data.components.utils import make_mesh
-from src.utils.checkpointing import load_checkpoint
 from src.utils.plotting import animate_solution, plot_solution
 
 pyrootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 
-log = utils.get_pylogger(__name__)
 
+def infer(
+    model: torch.nn.Module | str,
+    xlim: Tuple[float, float] = (0, 1),
+    tlim: Tuple[float, float] = (0, 1),
+    Nx: int = 1024,
+    Nt: int = 512,
+    solution: torch.tensor = None,
+    device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+):
+    # if isinstance(model, str):
+    #     model: torch.nn.Module = load_checkpoint(model)
+    model = None
+    model_name: str = model.__class__.__name__
 
-@utils.task_wrapper
-def evaluate(cfg: DictConfig) -> Tuple[dict, dict]:
-    """Evaluates given checkpoint on a datamodule testset.
+    xs: torch.tensor = torch.linspace(*xlim, Nx).to(device)
+    ts: torch.tensor = torch.linspace(*tlim, Nt).to(device)
+    # y: torch.tensor = make_mesh(xs, ts)
+    y = None
 
-    This method is wrapped in optional @task_wrapper decorator, that controls the behavior during
-    failure. Useful for multiruns, saving info about the crash, etc.
+    if model_name == "DeepONet":
+        u = solution[:: solution.shape[0] // model.num_sensor, 0].unsqueeze(0).to(device)
+        preds = model((u, y))
+    elif model_name == "FNO":
+        u = solution[:, : model.num_step].unsqueeze(0).to(device)
+        y = torch.linspace(*xlim, u.shape[1]).view(1, -1, 1).to(device)
+        preds = model(((u, y), Nt))
+    else:
+        preds = model((y[:, :1], y[:, 1:]))
 
-    Args:
-        cfg (DictConfig): Configuration composed by Hydra.
-
-    Returns:
-        Tuple[dict, dict]: Dict with metrics and dict with all instantiated objects.
-    """
-
-    assert cfg.ckpt_path
-
-    log.info(f"Instantiating datamodule <{cfg.data._target_}>")
-    datamodule: LightningDataModule = hydra.utils.instantiate(cfg.data)
-
-    log.info(f"Instantiating model <{cfg.model._target_}>")
-    model: LightningModule = hydra.utils.instantiate(cfg.model)
-
-    log.info("Instantiating loggers...")
-    logger: List[Logger] = utils.instantiate_loggers(cfg.get("logger"))
-
-    log.info(f"Instantiating trainer <{cfg.trainer._target_}>")
-    trainer: Trainer = hydra.utils.instantiate(cfg.trainer, logger=logger)
-
-    object_dict = {
-        "cfg": cfg,
-        "datamodule": datamodule,
-        "model": model,
-        "logger": logger,
-        "trainer": trainer,
-    }
-
-    if logger:
-        log.info("Logging hyperparameters!")
-        utils.log_hyperparameters(object_dict)
-
-    log.info("Starting testing!")
-    trainer.test(model=model, datamodule=datamodule, ckpt_path=cfg.ckpt_path)
-
-    # for predictions use trainer.predict(...)
-    # predictions = trainer.predict(model=model, dataloaders=dataloaders, ckpt_path=cfg.ckpt_path)
-
-    metric_dict = trainer.callback_metrics
-
-    return metric_dict, object_dict
+    preds = preds.view(Nx, Nt).detach().cpu()
+    return preds
 
 
 @hydra.main(version_base="1.3", config_path="../configs", config_name="eval.yaml")
 def main(cfg: DictConfig) -> None:
-    # apply extra utilities
-    # (e.g. ask for tags if none are provided in cfg, print cfg tree, etc.)
-    utils.extras(cfg)
+    # Load Model
+    model_name: str = cfg.model_name
+    device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model: torch.nn.Module = torch.nn.Module
 
-    evaluate(cfg)
+    # Generate Random Data
+    helper: object = hydra.utils.instantiate(cfg.generator)
+    solution: torch.tensor = helper.create_data(num_data=1).squeeze()
+
+    # Perform Inference
+    preds: torch.tensor = infer(model, helper.xlim, helper.tlim, helper.Nx, helper.Nt, solution)
+
+    # Plot Result
+    import matplotlib.pyplot as plt
+
+    fig = plot_solution(helper.xlim, helper.tlim, solution, preds, **cfg.plot)
+    plt.close()
+    # Animate Result
+    anim = animate_solution(helper.xlim, helper.tlim, solution, preds, **cfg.animate)
+    plt.close()
 
 
 if __name__ == "__main__":

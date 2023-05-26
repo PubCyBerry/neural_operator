@@ -2,7 +2,7 @@ from typing import Tuple
 
 import pytest
 
-from src.data.create_data import Data_Generator
+from src.data.components.create_data import Data_Generator
 
 
 @pytest.mark.parametrize("num_data", [3])

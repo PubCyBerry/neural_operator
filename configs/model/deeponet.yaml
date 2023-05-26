@@ -7,11 +7,15 @@ optimizer:
   weight_decay: 0.0
 
 scheduler:
-  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  _target_: torch.optim.lr_scheduler.StepLR
   _partial_: true
-  mode: min
-  factor: 0.1
-  patience: 10
+  step_size: 200
+  gamma: 0.9
+  # _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  # _partial_: true
+  # mode: min
+  # factor: 0.1
+  # patience: 10
 
 net:
   _target_: src.models.components.models.DeepONet

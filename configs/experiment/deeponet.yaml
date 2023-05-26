@@ -17,8 +17,8 @@ tags: ["Burgers", "DeepONet"]
 seed: 41
 
 trainer:
-  min_epochs: 300
-  max_epochs: 300
+  min_epochs: 10
+  max_epochs: 100
   gradient_clip_val: 0.5
   accelerator: gpu
   devices: 1

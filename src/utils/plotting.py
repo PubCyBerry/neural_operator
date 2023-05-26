@@ -3,6 +3,8 @@ from typing import Any, Tuple
 
 # Plotting
 import matplotlib as mpl
+
+mpl.use("TkAgg")
 import matplotlib.pyplot as plt
 import torch
 from matplotlib import animation, gridspec
@@ -12,10 +14,10 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 mpl.rcParams["animation.embed_limit"] = 2**128
 
 full_name = {
-    "DNN": "Deep Neural Network",
-    "PINN": "Physics Informed Neural Network",
-    "DeepONet": "Deep Operator Network",
-    "FNO": "Fourier Neural Operator",
+    "dnn": "Deep Neural Network",
+    "pinn": "Physics Informed Neural Network",
+    "deeponet": "Deep Operator Network",
+    "fno": "Fourier Neural Operator",
 }
 
 
@@ -178,6 +180,8 @@ def plot_solution(
 
         # [Option 2] use matplotlib
         plt.savefig(file_path.with_suffix(suffix))
+        plt.close()
+        print(f"file saved at <{file_path.with_suffix(suffix)}")
 
     # return img
     return fig
@@ -215,13 +219,13 @@ def animate_solution(
     ts = ts[::fast_t]
     dt = ts[1] - ts[0]
 
-    fig = plt.figure(figsize=figsize)
-    ax = plt.axes(xlim=(xs.min() - 0.2, xs.max() + 0.2), ylim=(ys.min() - 0.2, ys.max() + 0.2))
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.axis([xs.min() - 0.2, xs.max() + 0.2, ys.min() - 0.2, ys.max() + 0.2])
     (line,) = ax.plot([], [], "b-", linewidth=2, label="Exact")
     (pred,) = ax.plot([], [], "r--", linewidth=2, label="Prediction")
     ax.set_title("Waveform $u(x,t)$ at t = 0 seconds", fontsize=16)
-    ax.set_xlabel(r"$x \ [\mathrm{m}]$", fontsize=14)
-    ax.set_ylabel(r"$u(x) \ [\mathrm{m}/s]$", fontsize=14)
+    ax.set_xlabel(r"$x \ [\mathrm{m}]$", fontsize=15)
+    ax.set_ylabel(r"$u(x) \ [\mathrm{m}/s]$", fontsize=15)
     ax.grid(which="both", axis="both", linestyle="--")
 
     ys = ys[::fast_x, ::fast_t]
@@ -236,15 +240,12 @@ def animate_solution(
         return (line, pred)
 
     # animation function.  This is called sequentially
-    def animate(i):
-        line.set_data(xs, ys[:, i])
+    def animate(frame):
+        ax.set_title(f"Waveform $u(x,t)$ at t = {torch.round(dt * frame, decimals=2):.2f} seconds")
+        line.set_data(xs, ys[:, frame])
         if y_pred is not None:
-            pred.set_data(pred_xs, y_pred[:, i])
-        ax.set_title(
-            f"Waveform $u(x,t)$ at t = {torch.round(dt * i, decimals=2):.2f} seconds",
-            fontsize=14,
-        )
-        return (line,)
+            pred.set_data(pred_xs, y_pred[:, frame])
+        return line, pred
 
     # call the animator.  blit=True means only re-draw the parts that have changed.
     anim = animation.FuncAnimation(
@@ -262,5 +263,95 @@ def animate_solution(
             anim.save(filename=file_path.with_suffix(suffix), writer="ffmpeg", fps=fps)
         else:
             raise NotImplementedError
+        plt.close()
+        print(f"file saved at <{file_path.with_suffix(suffix)}")
+
+    return anim
+
+
+def artist_solution(
+    xlim: Tuple[float, float],
+    tlim: Tuple[float, float],
+    ys: torch.tensor = None,
+    y_pred: torch.tensor = None,
+    figsize: Tuple[int, int] = None,
+    interval: int = 50,
+    fps: int = 60,
+    result_dir: Path = Path("results"),
+    filename: str = None,
+    suffix: str = ".gif",
+    num_x: int = 128,
+    num_t: int = 64,
+    *args: Any,
+    **kwds: Any,
+):
+    """
+    plot time evolution animation of solution
+    x: x axis <- (num_x)
+    y: u(x,t) <- (num_x, num_t)
+    interval: time interval between frames (ms)
+    """
+    xs = torch.linspace(*xlim, ys.shape[0])
+    ts = torch.linspace(*tlim, ys.shape[1])
+
+    # Downsample images for speedup
+    fast_x = len(xs) // num_x
+    xs = xs[::fast_x]
+    fast_t = len(ts) // num_t
+    ts = ts[::fast_t]
+    dt = ts[1] - ts[0]
+
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.axis([xs.min() - 0.2, xs.max() + 0.2, ys.min() - 0.2, ys.max() + 0.2])
+    ax.grid(which="both", axis="both", linestyle="--")
+    ax.set_xlabel(r"$x \ [\mathrm{m}]$", fontsize=15)
+    ax.set_ylabel(r"$u(x) \ [\mathrm{m}/s]$", fontsize=15)
+    title = ax.text(
+        0.5,
+        1.05,
+        "Waveform $u(x,t)$ at t = 0 seconds",
+        ha="center",
+        transform=ax.transAxes,
+    )
+
+    ys = ys[::fast_x, ::fast_t]
+    if y_pred is not None:
+        y_pred = y_pred[::fast_x, ::fast_t]
+        pred_xs = torch.linspace(*xlim, y_pred.shape[0])
+        ax.legend()
+
+    container = list()
+    for frame in range(ys.shape[1]):
+        # title = ax.text(
+        #     0.5,
+        #     1.05,
+        #     f"Waveform $u(x,t)$ at t = {torch.round(dt * frame, decimals=2):.2f} seconds",
+        #     ha="center",
+        #     transform=ax.transAxes,
+        # )
+        title.set_text(
+            f"Waveform $u(x,t)$ at t = {torch.round(dt * frame, decimals=2):.2f} seconds".encode()
+        )
+        (line1,) = ax.plot(xs, ys[:, frame], "b-", linewidth=2, label="Exact")
+        if y_pred is None:
+            (line2,) = ax.plot([], [], "r--", linewidth=2, label="Prediction")
+        else:
+            (line2,) = ax.plot(pred_xs, y_pred[:, frame], "r--", linewidth=2, label="Prediction")
+        container.append([line1, line2, title])
+    anim = animation.ArtistAnimation(fig, container, interval=interval, blit=True)
+
+    # save image
+    if filename is not None:
+        file_path = Path(result_dir) / filename
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        if suffix == ".gif":
+            anim.save(filename=file_path.with_suffix(suffix), writer="imagemagick", fps=fps)
+
+        elif suffix == ".mp4":
+            anim.save(filename=file_path.with_suffix(suffix), writer="ffmpeg", fps=fps)
+        else:
+            raise NotImplementedError
+        plt.close()
+        print(f"file saved at <{file_path.with_suffix(suffix)}")
 
     return anim

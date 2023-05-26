@@ -1,4 +1,4 @@
-_target_: src.data.create_data.Data_Generator
+_target_: src.data.components.create_data.Data_Generator
 target_pde: Burgers_spectral # pde solver
 xlim: [0.0, 1.0] # spatial domain
 tlim: [0.0, 1.0] # temporal domain

@@ -213,4 +213,4 @@ class FNODataset(BaseDataset):
         u = self.u[idx]
         y = self.y
         s = self.s[idx]
-        return (u, y, self.Nt), s
+        return ((u, y), self.Nt), s

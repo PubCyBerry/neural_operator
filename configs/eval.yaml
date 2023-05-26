@@ -7,18 +7,21 @@ defaults:
 
 seed: 41
 
-model_name: null
 ckpt_dir: ${paths.model_dir}
+model_name: null # name of model (PINN, DNN, DeepONet, FNO, ...)
+which: null # select [best, last] checkpoint
+model_path: ${ckpt_dir}/${model_name}_${which}
+model_yaml: ${ckpt_dir}/${model_name}.yaml
 
 plot:
   title: Result - ${model_name}
-  filename: Result_${model_name}
+  filename: Result_${which}_${model_name}
   result_dir: ${paths.output_dir}
 
 animate:
   interval: 50
   fps: 60
-  filename: Result_${model_name}
+  filename: Result_${which}_${model_name}
   result_dir: ${paths.output_dir}
   num_x: 256
   num_t: 128

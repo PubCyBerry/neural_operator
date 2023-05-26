@@ -157,7 +157,7 @@ class FNO(BaseNN):
     def forward(self, axt: list):
         ax, total_step = axt
         if not isinstance(total_step, int):
-            total_step = total_step[0]
+            total_step = int(total_step[0])
 
         # step = 1
         preds = ax[0]  # t = t_init (batch, grid_x, num_step)
