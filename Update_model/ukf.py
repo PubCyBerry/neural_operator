@@ -338,46 +338,46 @@ def fx(x):
     # Nothing to do here. Process Model is random walk
     return x
 
-def model_update_ukf(data_loader,ukf_params,model : nn.Module,max_iter : int = 40):
-    learnable_params = list()
-    for p, k in zip(model.parameters(), model.state_dict().keys()):
-        if p.requires_grad == True:
-            learnable_params.extend(model.state_dict()[k].flatten().tolist())
-    state_dicts = model.state_dict()
+# def model_update_ukf(data_loader,ukf_params,model : nn.Module,max_iter : int = 40):
+#     learnable_params = list()
+#     for p, k in zip(model.parameters(), model.state_dict().keys()):
+#         if p.requires_grad == True:
+#             learnable_params.extend(model.state_dict()[k].flatten().tolist())
+#     state_dicts = model.state_dict()
     
-    loss_history = list()
+#     loss_history = list()
 
-    inp, tar = next(iter(data_loader))
-    if len(inp) > 50 :
-        idx = torch.linspace(0, len(inp)-1, 50, dtype=torch.int64)
-        inp = inp[idx]
-        tar = tar[idx]
-    tar = tar.flatten().detach().numpy()
+#     inp, tar = next(iter(data_loader))
+#     if len(inp) > 50 :
+#         idx = torch.linspace(0, len(inp)-1, 50, dtype=torch.int64)
+#         inp = inp[idx]
+#         tar = tar[idx]
+#     tar = tar.flatten().detach().numpy()
 
-    ukf = UKF(dim_x = len(learnable_params), dim_y = len(tar.flatten()), 
-            fx = fx, hx = model, ukf_params=ukf_params, x_mean_fn=None, y_mean_fn=None, init_x=learnable_params)
-    ukf.P = 0.00001
-    ukf.Q = 0.00001
-    ukf.R = 0.00001
+#     ukf = UKF(dim_x = len(learnable_params), dim_y = len(tar.flatten()), 
+#             fx = fx, hx = model, ukf_params=ukf_params, x_mean_fn=None, y_mean_fn=None, init_x=learnable_params)
+#     ukf.P = 0.00001
+#     ukf.Q = 0.00001
+#     ukf.R = 0.00001
 
-    for _ in range(max_iter):
-        # print('Iteration: ', iter + 1)
-        # print('Initial State at this iteration', ukf.x)
-        ukf.predict()
-        ukf.update(tar, inp)
-        print('.', end='')
-        # print('Updated State at this iteration', ukf.x)
+#     for _ in range(max_iter):
+#         # print('Iteration: ', iter + 1)
+#         # print('Initial State at this iteration', ukf.x)
+#         ukf.predict()
+#         ukf.update(tar, inp)
+#         print('.', end='')
+#         # print('Updated State at this iteration', ukf.x)
 
-        loss_history.append(ukf.return_loss())
+#         loss_history.append(ukf.return_loss())
 
 
-    learned_params = ukf.return_weight()
+#     learned_params = ukf.return_weight()
 
-    idx = 0
-    for p, k in zip(model.parameters(), model.state_dict().keys()):
-        if p.requires_grad == True:
-            l = len(p.flatten())
-            state_dicts[k] = torch.nn.Parameter(torch.from_numpy(learned_params[idx : idx + l].reshape(p.shape)))
-            idx += l
-    model.load_state_dict(state_dicts)
-    return model, loss_history, ukf
+#     idx = 0
+#     for p, k in zip(model.parameters(), model.state_dict().keys()):
+#         if p.requires_grad == True:
+#             l = len(p.flatten())
+#             state_dicts[k] = torch.nn.Parameter(torch.from_numpy(learned_params[idx : idx + l].reshape(p.shape)))
+#             idx += l
+#     model.load_state_dict(state_dicts)
+#     return model, loss_history, ukf
