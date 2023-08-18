@@ -1,3 +1,16 @@
+frequency-reponse-prediction
+example.py
+runs
+result
+DeepONet
+example.ipynb
+example2.py
+project.code-workspace
+generate_ev_data/data
+signal_project
+
+visualize.ipynb
+checkpoints
 
 # Don't commit data file
 # Keep Directory only

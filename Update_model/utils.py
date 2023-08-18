@@ -11,6 +11,13 @@ from torch.utils.data import Dataset, DataLoader
 
 from ukf import *
 
+def model_parameter_list(model : nn.Module):
+    learnable_params = list()
+    for p, k in zip(model.parameters(), model.state_dict().keys()):
+        if p.requires_grad == True:
+            learnable_params.extend(model.state_dict()[k].flatten().tolist())
+    return learnable_params
+
 def get_f(name: str = "tanh") -> nn.Module:
     activations = nn.ModuleDict(
         [
@@ -96,9 +103,21 @@ class EV_dataset(Dataset):
         self.routes = routes
         self.overall_data = self.overall_data.loc[(self.overall_data['vin'].isin(self.v_nums)) & (self.overall_data['route'].isin(self.routes))]
         self.trip_data = self.trip_data.loc[(self.trip_data['vin'].isin(self.v_nums)) & (self.trip_data['route'].isin(self.routes))]
+        trip_velocity_list = []
+        trip_load_list = []
+        for i in self.v_nums:
+            df = self.overall_data.loc[self.overall_data['vin'] == i]
+            dd = df['route'].value_counts()
+            for j in self.routes:
+                if len(self.trip_data.loc[(self.trip_data['vin'] == i) & (self.trip_data['route'] == j)]['trip_velocity'].values) > 1:
+                    print(self.trip_data.loc[(self.trip_data['vin'] == i) & (self.trip_data['route'] == j)]['trip_velocity'].values)
+                trip_velocity_list.extend([self.trip_data.loc[(self.trip_data['vin'] == i) & (self.trip_data['route'] == j)]['trip_velocity'].values.item()] * dd[j])
+                trip_load_list.extend([self.trip_data.loc[(self.trip_data['vin'] == i) & (self.trip_data['route'] == j)]['trip_load'].values.item()] * dd[j])
+        self.overall_data['trip_velocity'] = trip_velocity_list
+        self.overall_data['trip_load'] = trip_load_list
 
     def normalizing(self, df, key):
-        minmax = df[key].min(), df[key].max()
+        minmax = (df[key].min(), df[key].max())
         df[key] = (df[key] - minmax[0]) / (minmax[1] - minmax[0])
         self.normalizing_factors[key] = minmax
 
@@ -106,15 +125,9 @@ class EV_dataset(Dataset):
         return self.overall_data.shape[0]
     
     def __getitem__(self, idx):
-        x = self.overall_data.iloc[idx]
-        v_num = x['vin']
-        route = x['route']
-        t = self.trip_data.loc[(self.trip_data['vin'] == v_num) & (self.trip_data['route'] == route)]
-        trip_velocity = t['trip_velocity'].item()
-        trip_dist = x['trip_dist'].item()
-        trip_load = t['trip_load'].item()
-        target_voltage = np.expand_dims(np.array(x['trip_v'].item(), dtype=np.float32), axis=0)
-        return np.array([trip_velocity, trip_dist, trip_load], dtype=np.float32), target_voltage
+        inp = self.overall_data.iloc[idx][['trip_velocity', 'trip_dist', 'trip_load']].values.astype(np.float32)
+        tar = np.expand_dims(self.overall_data.iloc[idx]['trip_v'].astype(np.float32), axis=0)
+        return  inp, tar
 
 def train_ukf(
         model : torch.nn.Module,
@@ -123,7 +136,7 @@ def train_ukf(
         epoch : int = 40,
         device : torch.device = 'cpu',
         ukf_params : list = [1, 2, 0]
-):
+        ):
     '''
     ukf_params : list of parameters. [alpha, beta, kappa]
     '''
