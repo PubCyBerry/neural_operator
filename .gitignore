@@ -1,5 +1,5 @@
-frequency-reponse-prediction
-update-digital-twin
+frequency-reponse-prediction/*
+update-digital-twin/*
 example.py
 runs
 result
